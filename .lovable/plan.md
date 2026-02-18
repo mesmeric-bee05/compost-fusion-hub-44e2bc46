@@ -1,140 +1,128 @@
 
 
-# Implementation Plan: Captain Compost x MyEcoLoop - Full Feature Build
+# Full Platform Build: End-to-End Fixes, Product Images, Admin Dashboard, Driver Dashboard
 
-This plan covers 5 major deliverables, built incrementally in order. Each step builds on the previous one.
-
----
-
-## Phase 1: Authentication Pages (Login, Signup, Email Verification, Role Selection)
-
-Create a full authentication system with role-based registration.
-
-**New files to create:**
-- `src/pages/Auth.tsx` -- Login/signup page with tabs
-- `src/components/auth/LoginForm.tsx` -- Email + password login form
-- `src/components/auth/SignupForm.tsx` -- Registration with full name, email, phone, password, and role selection (Individual, Farmer, Institution, Recycler, Driver)
-- `src/components/auth/EmailVerification.tsx` -- Post-signup verification prompt
-- `src/pages/ResetPassword.tsx` -- Password reset page for recovery flow
-- `src/hooks/useAuth.ts` -- Auth state hook (session, user, role, loading)
-- `src/components/auth/ProtectedRoute.tsx` -- Route guard for authenticated pages
-
-**Changes to existing files:**
-- `src/App.tsx` -- Add routes for `/auth`, `/reset-password`, and all new pages
-- Landing Navbar -- Show user menu when logged in instead of "Log in" button
-
-**Key details:**
-- Role selection as radio buttons during signup (stored via existing `handle_new_user` trigger, which defaults to 'individual' -- we will update the trigger to accept role from user metadata)
-- Database migration: Update `handle_new_user()` function to read role from `raw_user_meta_data` so signup can pass the selected role
-- Email verification required (no auto-confirm)
-- Forgot password flow with redirect to `/reset-password`
-- Zod validation on all form inputs
+This plan addresses all four requests in sequence, building each feature in full depth.
 
 ---
 
-## Phase 2: Seed Product Database
+## Part 1: End-to-End Fixes
 
-Populate the products table with real Aerobin composters, RVMs, and compost products with KES pricing.
+Several issues were identified during testing:
 
-**Products to seed (using database insert tool):**
+### 1A. Missing `auth.users` trigger
+The `handle_new_user()` function exists but the trigger connecting it to `auth.users` may not be properly attached. A migration will ensure the trigger is created (using `CREATE OR REPLACE` / `IF NOT EXISTS` pattern) so that every signup automatically creates entries in `profiles`, `user_roles`, and `rewards`.
 
-| Product | Category | Price (KES) | Key Specs |
-|---------|----------|-------------|-----------|
-| Aerobin 200L Composter | composters | 45,000 | 200L capacity, household use, insulated, aerobic |
-| Aerobin 400L Composter | composters | 75,000 | 400L capacity, dual-chamber, small farms |
-| Aerobin 600L Composter | composters | 110,000 | 600L capacity, institutional/commercial |
-| Reverse Vending Machine (RVM) Standard | equipment | 350,000 | PET bottles, aluminum cans, IoT-enabled |
-| Reverse Vending Machine (RVM) Pro | equipment | 550,000 | Multi-material, touchscreen, reward system |
-| Premium Organic Compost (25kg) | compost | 500 | Lab-tested, NPK balanced, certified organic |
-| Premium Organic Compost (50kg) | compost | 900 | Bulk bag, farm-grade, nutrient-rich |
-| Vermicompost Special Blend (10kg) | compost | 350 | Worm-cast compost, high humic acid |
-| Composting Starter Kit | accessories | 2,500 | Thermometer, activator, guide booklet |
-| Bio-Enzyme Activator (1L) | accessories | 800 | Speeds up composting, natural enzymes |
+### 1B. Product images missing
+All 10 products currently have `NULL` for `image_url`. Products display placeholder leaf icons instead of real images. This will be fixed in Part 2.
+
+### 1C. RLS policy verification
+All collection_requests policies are confirmed PERMISSIVE (not RESTRICTIVE), so users can create/view their own collections correctly. No changes needed.
 
 ---
 
-## Phase 3: Product Catalog Page
+## Part 2: Product Images via AI Generation
 
-Full e-commerce catalog with filters, search, and detail pages pulling from the database.
+Generate product images using the Lovable AI image generation API (google/gemini-2.5-flash-image), then store them in a Supabase storage bucket and update product records.
 
-**New files to create:**
-- `src/pages/Products.tsx` -- Main catalog page with grid layout
-- `src/components/products/ProductCard.tsx` -- Product card component
-- `src/components/products/ProductFilters.tsx` -- Category filter sidebar/bar + search input
-- `src/pages/ProductDetail.tsx` -- Full product detail page with specs, gallery, reviews, add-to-cart
-- `src/hooks/useProducts.ts` -- React Query hooks for fetching products
-- `src/hooks/useCart.ts` -- Shopping cart state (localStorage-based initially)
-- `src/pages/Cart.tsx` -- Shopping cart page with quantity controls and checkout
-- `src/components/products/ProductReviews.tsx` -- Reviews section (read/write)
+**Implementation:**
+1. Create a `product-images` storage bucket (public, for product catalog images)
+2. Create an edge function `generate-product-images` that:
+   - For each product category (composters, equipment, compost, accessories), generates a professional product photo using the AI image API
+   - Converts the base64 result to a file and uploads to the storage bucket
+   - Updates the product's `image_url` in the database
+3. Call the edge function once to populate all product images
+4. Update `ProductCard` and `ProductDetail` components to properly display storage URLs
+
+**Products and their image prompts:**
+- Aerobin 200L/400L/600L: "Professional product photo of a green insulated aerobic composter bin, [size] liters, on white background"
+- RVM Standard/Pro: "Professional product photo of a modern reverse vending machine for recycling, digital display, on white background"
+- Compost 25kg/50kg: "Professional product photo of a bag of premium organic compost, [weight], on white background"
+- Vermicompost: "Professional product photo of a bag of vermicompost worm castings, 10kg, on white background"
+- Starter Kit: "Professional product photo of a composting starter kit with thermometer and guidebook, on white background"
+- Bio-Enzyme: "Professional product photo of a bottle of bio-enzyme composting activator, 1 liter, on white background"
+
+---
+
+## Part 3: Admin Dashboard
+
+A comprehensive admin dashboard accessible only to users with the `admin` role.
+
+**New files:**
+- `src/pages/AdminDashboard.tsx` -- Main admin page with sidebar layout
+- `src/components/admin/AdminStats.tsx` -- Summary cards (total users, orders, collections, revenue)
+- `src/components/admin/RevenueChart.tsx` -- Revenue over time using Recharts (AreaChart)
+- `src/components/admin/OrdersTable.tsx` -- Recent orders table with status management
+- `src/components/admin/CollectionsTable.tsx` -- All collection requests with driver assignment
+- `src/components/admin/UsersTable.tsx` -- User management table
+
+**Database requirements:**
+- Admin role check uses existing `has_role()` function
+- Admin RLS policies already exist on all tables (ALL command for admin role)
+- No schema changes needed -- admin reads are already permitted by existing policies
+
+**Admin stats will query:**
+- Total profiles count
+- Total orders count and sum of `total_amount`
+- Total collection requests count, broken down by status
+- Orders grouped by month for the revenue chart
+
+**Route:** `/admin` -- protected by `ProtectedRoute` + additional admin role check
+
+**UI Layout:**
+- Sidebar with navigation: Overview, Orders, Collections, Users
+- Top-level summary cards with icons and KES formatting
+- Revenue chart (last 6 months) using Recharts AreaChart
+- Tables with status badges, sortable columns, and action buttons
+
+---
+
+## Part 4: Driver Dashboard
+
+A dedicated view for users with the `driver` role to manage assigned collection tasks.
+
+**New files:**
+- `src/pages/DriverDashboard.tsx` -- Driver's main page
+- `src/components/driver/AssignedCollections.tsx` -- List of assigned collection tasks with action buttons
+- `src/components/driver/CollectionDetailCard.tsx` -- Expanded view of a single collection with mark-as-collected button
 
 **Features:**
-- Category filter tabs: All, Composters, Equipment, Compost, Accessories
-- Text search with debounce
-- Sort by price (low-high, high-low), name, newest
-- Product detail page at `/products/:slug`
-- Add to cart with toast notification
-- Cart page with quantity adjustment, remove items, order total in KES
-- Checkout form (delivery address, phone, notes) that creates an order + order_items in the database
-- Wishlist toggle (heart icon) for logged-in users
+- Shows only collections where `driver_id = auth.uid()`
+- Status workflow: Scheduled -> mark as "collected" with one click
+- Card-based layout showing: waste type, address, date/time, volume, user notes
+- Status badge with color coding
+- Confirmation dialog before marking as collected
+- Auto-refresh after status update
+
+**Database requirements:**
+- Existing RLS policies already allow drivers to SELECT and UPDATE their assigned collections
+- Driver updates `status` to `collected` and optionally adds `verification_photo_url`
+
+**Route:** `/driver` -- protected by `ProtectedRoute` + driver role check
 
 ---
 
-## Phase 4: Waste Collection System
+## Part 5: App.tsx Route Updates
 
-Collection request form with scheduling and a user dashboard for tracking.
+Add new routes to `App.tsx`:
+- `/admin` -- AdminDashboard (protected, admin-only)
+- `/driver` -- DriverDashboard (protected, driver-only)
 
-**New files to create:**
-- `src/pages/Collections.tsx` -- Landing page for waste collection service
-- `src/components/collections/CollectionRequestForm.tsx` -- Multi-step form: waste type, volume, address, date/time, frequency, notes
-- `src/components/collections/CollectionTracker.tsx` -- Status timeline for user's requests
-- `src/pages/Dashboard.tsx` -- Role-based user dashboard
-- `src/components/dashboard/UserCollections.tsx` -- List of user's collection requests with status
-- `src/components/dashboard/UserOrders.tsx` -- Order history
-- `src/components/dashboard/ImpactStats.tsx` -- Personal impact metrics cards
-- `src/components/dashboard/DriverDashboard.tsx` -- Driver-specific view (assigned tasks, mark collected)
-
-**Features:**
-- Waste type selection: Organic, Recyclable, Agricultural, Mixed
-- Scheduling: one-time or recurring (weekly, bi-weekly, monthly)
-- Date/time picker for preferred pickup
-- Address input with notes field
-- Volume estimation slider (kg)
-- Status tracking: Requested -> Scheduled -> Collected -> Cancelled
-- Dashboard shows all user requests with filtering by status
-- Driver dashboard shows assigned collections with ability to update status
+Update Navbar to show role-specific links:
+- Admin users see "Admin" link in the user dropdown
+- Driver users see "My Tasks" link in the user dropdown
 
 ---
 
-## Phase 5: User Dashboard, Impact Metrics & Remaining Pages
+## Technical Summary
 
-Complete the platform with dashboard, impact tracking, education hub stub, and community stub.
-
-**New files to create:**
-- `src/components/dashboard/RewardsCard.tsx` -- Points, level, badges display
-- `src/components/dashboard/AdminDashboard.tsx` -- Admin overview (total users, orders, collections, revenue)
-- `src/pages/Education.tsx` -- Education hub page (content library from database)
-- `src/pages/Community.tsx` -- Forum posts listing
-- `src/pages/About.tsx` -- About page with mission, team, partner info
-- `src/pages/Profile.tsx` -- User profile settings (edit name, phone, location, language)
-- `src/components/layout/DashboardLayout.tsx` -- Sidebar layout for authenticated pages
-
-**Features:**
-- Role-based dashboard routing (different views for individual, farmer, driver, admin)
-- Impact metrics display with recharts (waste diverted over time, CO2 saved)
-- Education page pulls published content from database
-- Community forum with create/view posts
-- Profile page with editable fields
-- Admin dashboard with summary cards and recent activity
-
----
-
-## Technical Notes
-
-- **Database migration needed**: Update `handle_new_user()` trigger to read role from `raw_user_meta_data->>'role'` instead of always defaulting to 'individual'
-- **RLS note**: All policies are already properly configured. The `collection_requests` policies use RESTRICTIVE mode which is correct.
-- **Cart**: Uses localStorage for cart state (no login required to browse/add). Checkout requires authentication.
-- **All forms** use react-hook-form + zod validation
-- **All data fetching** uses @tanstack/react-query
-- **Routing**: All new pages added to App.tsx with proper route structure
-- **Security**: No sensitive operations on client side. Role checks use `has_role()` security definer function. No admin checks via localStorage.
+| Change | Type | Files |
+|--------|------|-------|
+| Trigger fix | DB Migration | 1 migration |
+| Storage bucket | DB Migration | 1 migration |
+| Image generation | Edge Function | `supabase/functions/generate-product-images/index.ts` |
+| Admin dashboard | Frontend | 5 new components + 1 page |
+| Driver dashboard | Frontend | 3 new components + 1 page |
+| Route updates | Frontend | `App.tsx`, `Navbar.tsx` |
+| Role-based guards | Frontend | New `AdminRoute.tsx`, `DriverRoute.tsx` components |
 
