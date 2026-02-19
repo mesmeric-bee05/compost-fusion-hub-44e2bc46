@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Menu, X, Leaf, ShoppingCart, User, LayoutDashboard, LogOut, Settings } from "lucide-react";
+import { Menu, X, Leaf, ShoppingCart, User, LayoutDashboard, LogOut, Settings, Shield, Truck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,7 @@ const navLinks = [
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, role, signOut } = useAuth();
   const { count } = useCart();
 
   return (
@@ -56,6 +56,8 @@ const Navbar = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild><Link to="/dashboard" className="flex items-center gap-2"><LayoutDashboard className="h-4 w-4" />Dashboard</Link></DropdownMenuItem>
+                {role === "admin" && <DropdownMenuItem asChild><Link to="/admin" className="flex items-center gap-2"><Shield className="h-4 w-4" />Admin</Link></DropdownMenuItem>}
+                {role === "driver" && <DropdownMenuItem asChild><Link to="/driver" className="flex items-center gap-2"><Truck className="h-4 w-4" />My Tasks</Link></DropdownMenuItem>}
                 <DropdownMenuItem asChild><Link to="/profile" className="flex items-center gap-2"><Settings className="h-4 w-4" />Profile</Link></DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut} className="flex items-center gap-2"><LogOut className="h-4 w-4" />Sign Out</DropdownMenuItem>
