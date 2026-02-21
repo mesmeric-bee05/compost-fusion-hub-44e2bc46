@@ -167,7 +167,7 @@ serve(async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: "Captain Compost <orders@captaincompost.co.ke>",
+        from: "Captain Compost <onboarding@resend.dev>",  // Change to orders@captaincompost.co.ke after verifying domain on Resend
         to: [customerEmail],
         subject: info.subject,
         html,
