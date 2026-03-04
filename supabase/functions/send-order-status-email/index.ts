@@ -59,20 +59,16 @@ const buildEmailHtml = (data: OrderStatusEmailRequest, customerEmail: string, in
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);max-width:600px;width:100%;">
-          <!-- Header -->
           <tr>
             <td style="background:${info.color};padding:32px;text-align:center;">
               <p style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">🌿 CaptainCompost</p>
               <h1 style="color:#ffffff;margin:16px 0 0;font-size:26px;font-weight:700;">${info.headline}</h1>
             </td>
           </tr>
-          <!-- Body -->
           <tr>
             <td style="padding:40px 40px 32px;">
               <p style="font-size:16px;color:#374151;margin:0 0 16px;">Hi ${data.customerName},</p>
               <p style="font-size:16px;color:#374151;margin:0 0 32px;line-height:1.6;">${info.body}</p>
-
-              <!-- Order Summary Box -->
               <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:24px;margin-bottom:32px;">
                 <h3 style="margin:0 0 16px;font-size:14px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;">Order Summary</h3>
                 <table width="100%" cellpadding="0" cellspacing="0">
@@ -98,14 +94,12 @@ const buildEmailHtml = (data: OrderStatusEmailRequest, customerEmail: string, in
                   ` : ""}
                 </table>
               </div>
-
               <p style="font-size:14px;color:#6b7280;line-height:1.6;margin:0 0 8px;">
                 Questions about your order? Contact us at 
                 <a href="mailto:info@captaincompost.co.ke" style="color:#22c55e;">info@captaincompost.co.ke</a>
               </p>
             </td>
           </tr>
-          <!-- Footer -->
           <tr>
             <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:24px 40px;text-align:center;">
               <p style="margin:0;font-size:13px;color:#9ca3af;">© 2026 Captain Compost · Nairobi, Kenya</p>
@@ -146,7 +140,6 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    // Look up user email using service role (bypasses RLS)
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -167,7 +160,7 @@ serve(async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: "Captain Compost <onboarding@resend.dev>",  // Change to orders@captaincompost.co.ke after verifying domain on Resend
+        from: "Captain Compost <orders@captaincompost.co.ke>",
         to: [customerEmail],
         subject: info.subject,
         html,

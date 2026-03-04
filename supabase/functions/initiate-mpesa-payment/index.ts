@@ -7,6 +7,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const MPESA_BASE_URL = "https://api.safaricom.co.ke";
+
 interface StkRequest {
   orderId: string;
   phone: string;
@@ -14,12 +16,13 @@ interface StkRequest {
 }
 
 async function getMpesaAccessToken(): Promise<string> {
-  const consumerKey = Deno.env.get("MPESA_CONSUMER_KEY")!;
-  const consumerSecret = Deno.env.get("MPESA_CONSUMER_SECRET")!;
-  const credentials = btoa(`${consumerKey}:${consumerSecret}`);
+  const consumerKey = Deno.env.get("MPESA_CONSUMER_KEY");
+  const consumerSecret = Deno.env.get("MPESA_CONSUMER_SECRET");
+  if (!consumerKey || !consumerSecret) throw new Error("M-Pesa credentials not configured");
 
+  const credentials = btoa(`${consumerKey}:${consumerSecret}`);
   const res = await fetch(
-    "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",
+    `${MPESA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials`,
     { headers: { Authorization: `Basic ${credentials}` } }
   );
   const data = await res.json();
@@ -32,6 +35,7 @@ function formatPhone(phone: string): string {
   if (cleaned.startsWith("+254")) cleaned = cleaned.slice(1);
   else if (cleaned.startsWith("0")) cleaned = "254" + cleaned.slice(1);
   else if (!cleaned.startsWith("254")) cleaned = "254" + cleaned;
+  if (!/^254[17]\d{8}$/.test(cleaned)) throw new Error("Invalid Kenyan phone number");
   return cleaned;
 }
 
@@ -41,34 +45,61 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Authenticate user
+    // Authenticate user via getClaims
     const authHeader = req.headers.get("authorization");
-    if (!authHeader) throw new Error("Missing authorization header");
+    if (!authHeader?.startsWith("Bearer ")) throw new Error("Unauthorized");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
 
-    const { orderId, phone, amount }: StkRequest = await req.json();
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) throw new Error("Unauthorized");
+    const userId = claimsData.claims.sub as string;
+
+    const body: StkRequest = await req.json();
+    const { orderId, phone, amount } = body;
     if (!orderId || !phone || !amount) throw new Error("Missing orderId, phone, or amount");
+    if (typeof amount !== "number" || amount <= 0 || amount > 500000) throw new Error("Invalid amount");
 
     const formattedPhone = formatPhone(phone);
-    const shortcode = Deno.env.get("MPESA_SHORTCODE")!;
-    const passkey = Deno.env.get("MPESA_PASSKEY")!;
+    const shortcode = Deno.env.get("MPESA_SHORTCODE");
+    const passkey = Deno.env.get("MPESA_PASSKEY");
+    if (!shortcode || !passkey) throw new Error("M-Pesa shortcode/passkey not configured");
+
     const timestamp = new Date().toISOString().replace(/[-T:.Z]/g, "").slice(0, 14);
     const password = btoa(`${shortcode}${passkey}${timestamp}`);
 
-    // Use service role to insert payment record
     const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Get M-Pesa access token
+    // Verify the order belongs to the user and is pending
+    const { data: order, error: orderErr } = await serviceClient
+      .from("orders")
+      .select("id, user_id, status, total_amount")
+      .eq("id", orderId)
+      .single();
+
+    if (orderErr || !order) throw new Error("Order not found");
+    if (order.user_id !== userId) throw new Error("Order does not belong to this user");
+    if (order.status !== "pending") throw new Error("Order is not in pending status");
+    if (Math.ceil(order.total_amount) !== Math.ceil(amount)) throw new Error("Amount mismatch");
+
+    // Check for existing pending payment
+    const { data: existingPayment } = await serviceClient
+      .from("payments")
+      .select("id, status")
+      .eq("order_id", orderId)
+      .eq("status", "pending")
+      .limit(1)
+      .maybeSingle();
+
+    if (existingPayment) throw new Error("A payment is already pending for this order. Please wait or try again shortly.");
+
     const accessToken = await getMpesaAccessToken();
 
-    // Build callback URL
     const projectId = supabaseUrl.replace("https://", "").split(".")[0];
     const callbackUrl = `https://${projectId}.supabase.co/functions/v1/mpesa-callback`;
 
@@ -87,7 +118,7 @@ serve(async (req: Request): Promise<Response> => {
     };
 
     const stkRes = await fetch(
-      "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
+      `${MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest`,
       {
         method: "POST",
         headers: {
@@ -105,10 +136,10 @@ serve(async (req: Request): Promise<Response> => {
       throw new Error(stkData.errorMessage || stkData.ResponseDescription || "STK Push failed");
     }
 
-    // Save payment record
+    // Save payment record using service role
     const { error: insertError } = await serviceClient.from("payments").insert({
       order_id: orderId,
-      user_id: user.id,
+      user_id: userId,
       phone_number: formattedPhone,
       amount: Math.ceil(amount),
       mpesa_checkout_request_id: stkData.CheckoutRequestID,
@@ -131,7 +162,7 @@ serve(async (req: Request): Promise<Response> => {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("initiate-mpesa-payment error:", message);
     return new Response(JSON.stringify({ error: message }), {
-      status: error instanceof Error && error.message === "Unauthorized" ? 401 : 500,
+      status: message === "Unauthorized" ? 401 : 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   }
