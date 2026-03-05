@@ -6,156 +6,217 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { Truck, User } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type OrderStatus = Database["public"]["Enums"]["order_status"];
 const statuses: OrderStatus[] = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
 
 const statusColor: Record<OrderStatus, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  confirmed: "bg-blue-100 text-blue-800",
-  shipped: "bg-purple-100 text-purple-800",
-  delivered: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
+  pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  confirmed: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  shipped: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+  delivered: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  cancelled: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
 };
 
 const formatKES = (n: number) =>
   new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(n);
 
-interface OrderRow {
-  id: string;
-  created_at: string;
-  total_amount: number;
-  status: string;
-  delivery_address: string | null;
-  user_id: string;
-  customer_email: string | null;
-  customer_name: string | null;
-}
-
 export default function OrdersTable() {
   const qc = useQueryClient();
 
+  // Fetch orders
   const { data: orders, isLoading } = useQuery({
     queryKey: ["admin-orders"],
-    queryFn: async (): Promise<OrderRow[]> => {
-      // Fetch orders
-      const { data: ordersData, error } = await supabase
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from("orders")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(100);
       if (error) throw error;
-
-      // Fetch user emails & names from auth via profiles
-      const userIds = [...new Set(ordersData.map((o) => o.user_id))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, full_name")
-        .in("user_id", userIds);
-
-      const profileMap = new Map(profiles?.map((p) => [p.user_id, p.full_name]) ?? []);
-
-      // We can't query auth.users directly from client, but we can look up emails
-      // via a custom approach: store email in profiles or accept that we have full_name
-      return ordersData.map((o) => ({
-        ...o,
-        customer_name: profileMap.get(o.user_id) ?? null,
-        customer_email: null, // fetched separately per update via edge function context
-      }));
+      return data;
     },
   });
 
+  // Fetch profiles for customer names
+  const userIds = [...new Set(orders?.map((o) => o.user_id) ?? [])];
+  const { data: profiles } = useQuery({
+    queryKey: ["admin-profiles", userIds],
+    queryFn: async () => {
+      if (!userIds.length) return [];
+      const { data, error } = await supabase.from("profiles").select("user_id, full_name, phone").in("user_id", userIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: userIds.length > 0,
+  });
+
+  // Fetch drivers for assignment dropdown
+  const { data: drivers } = useQuery({
+    queryKey: ["admin-drivers"],
+    queryFn: async () => {
+      const { data: driverRoles, error } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "driver");
+      if (error) throw error;
+      if (!driverRoles?.length) return [];
+
+      const driverIds = driverRoles.map((r) => r.user_id);
+      const { data: driverProfiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, phone")
+        .in("user_id", driverIds);
+      return driverProfiles ?? [];
+    },
+  });
+
+  const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) ?? []);
+
+  // Update order status with email + SMS notifications
   const updateStatus = useMutation({
-    mutationFn: async ({ id, status, userId, customerName, totalAmount, deliveryAddress }: {
+    mutationFn: async ({ id, status, userId, totalAmount, deliveryAddress, deliveryPhone }: {
       id: string;
       status: OrderStatus;
       userId: string;
-      customerName: string | null;
       totalAmount: number;
       deliveryAddress: string | null;
+      deliveryPhone: string | null;
     }) => {
-      // 1. Update status in DB
       const { error } = await supabase.from("orders").update({ status }).eq("id", id);
       if (error) throw error;
 
-      // 2. Fire email notification (best-effort – don't block on failure)
-      try {
-        // Get user email from auth session's metadata via edge function
-        await supabase.functions.invoke("send-order-status-email", {
-          body: {
-            orderId: id,
-            orderStatus: status,
-            customerEmail: `user-${userId.slice(0, 6)}@placeholder.com`, // edge fn resolves real email via service role
-            customerName: customerName ?? "Valued Customer",
-            totalAmount,
-            deliveryAddress,
-            userId, // edge function will use service role to look up real email
-          },
-        });
-      } catch (emailErr) {
-        console.warn("Email notification failed (non-blocking):", emailErr);
+      const profile = profileMap.get(userId);
+      const customerName = profile?.full_name || "Valued Customer";
+
+      // Fire email notification (best-effort)
+      supabase.functions.invoke("send-order-status-email", {
+        body: { orderId: id, orderStatus: status, customerName, totalAmount, deliveryAddress, userId },
+      }).catch((e) => console.warn("Email failed:", e));
+
+      // Fire SMS notification (best-effort)
+      const smsPhone = deliveryPhone || profile?.phone;
+      if (smsPhone) {
+        const smsMessages: Record<string, string> = {
+          confirmed: `Hi ${customerName}, your Captain Compost order #${id.slice(0, 8).toUpperCase()} (KES ${totalAmount.toLocaleString()}) has been confirmed! We're preparing it for dispatch. 🌿`,
+          shipped: `Hi ${customerName}, your Captain Compost order #${id.slice(0, 8).toUpperCase()} is on its way! You'll receive it soon. 🚚`,
+          delivered: `Hi ${customerName}, your Captain Compost order #${id.slice(0, 8).toUpperCase()} has been delivered! Thank you for going green with us. ✅🌱`,
+          cancelled: `Hi ${customerName}, your Captain Compost order #${id.slice(0, 8).toUpperCase()} has been cancelled. Contact info@captaincompost.co.ke for questions.`,
+        };
+        if (smsMessages[status]) {
+          supabase.functions.invoke("send-sms-notification", {
+            body: { phone: smsPhone, message: smsMessages[status] },
+          }).catch((e) => console.warn("SMS failed:", e));
+        }
       }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-orders"] });
-      toast({ title: "Order updated", description: "Status changed and customer notified." });
+      toast({ title: "Order updated", description: "Status changed & customer notified." });
     },
     onError: (err) => {
       toast({ title: "Update failed", description: String(err), variant: "destructive" });
     },
   });
 
+  // Assign driver
+  const assignDriver = useMutation({
+    mutationFn: async ({ orderId, driverId }: { orderId: string; driverId: string | null }) => {
+      const { error } = await supabase.from("orders").update({ driver_id: driverId }).eq("id", orderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-orders"] });
+      toast({ title: "Driver assigned" });
+    },
+    onError: (err) => {
+      toast({ title: "Assignment failed", description: String(err), variant: "destructive" });
+    },
+  });
+
   if (isLoading) return <Skeleton className="h-64 w-full" />;
 
   return (
-    <div className="rounded-lg border">
+    <div className="rounded-lg border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Order ID</TableHead>
+            <TableHead>Order</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Customer</TableHead>
             <TableHead>Amount</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Update Status</TableHead>
+            <TableHead>Driver</TableHead>
+            <TableHead>Update</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {orders?.map((order) => (
-            <TableRow key={order.id}>
-              <TableCell className="font-mono text-xs">{order.id.slice(0, 8)}</TableCell>
-              <TableCell>{format(new Date(order.created_at), "MMM d, yyyy")}</TableCell>
-              <TableCell className="max-w-[120px] truncate text-sm">{order.customer_name ?? "—"}</TableCell>
-              <TableCell>{formatKES(Number(order.total_amount))}</TableCell>
-              <TableCell>
-                <Badge className={statusColor[order.status as OrderStatus]}>{order.status}</Badge>
-              </TableCell>
-              <TableCell>
-                <Select
-                  value={order.status}
-                  onValueChange={(v) =>
-                    updateStatus.mutate({
-                      id: order.id,
-                      status: v as OrderStatus,
-                      userId: order.user_id,
-                      customerName: order.customer_name,
-                      totalAmount: Number(order.total_amount),
-                      deliveryAddress: order.delivery_address,
-                    })
-                  }
-                >
-                  <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {statuses.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </TableCell>
-            </TableRow>
-          ))}
+          {orders?.map((order) => {
+            const profile = profileMap.get(order.user_id);
+            return (
+              <TableRow key={order.id}>
+                <TableCell className="font-mono text-xs text-foreground">{order.id.slice(0, 8)}</TableCell>
+                <TableCell className="text-sm text-foreground">{format(new Date(order.created_at), "MMM d")}</TableCell>
+                <TableCell className="max-w-[120px] truncate text-sm text-foreground">
+                  <div className="flex items-center gap-1">
+                    <User className="h-3 w-3 text-muted-foreground" />
+                    {profile?.full_name || "—"}
+                  </div>
+                </TableCell>
+                <TableCell className="font-medium text-foreground">{formatKES(Number(order.total_amount))}</TableCell>
+                <TableCell>
+                  <Badge className={statusColor[order.status as OrderStatus]}>{order.status}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Select
+                    value={(order as any).driver_id || "unassigned"}
+                    onValueChange={(v) => assignDriver.mutate({
+                      orderId: order.id,
+                      driverId: v === "unassigned" ? null : v,
+                    })}
+                  >
+                    <SelectTrigger className="w-36">
+                      <Truck className="mr-1 h-3 w-3" />
+                      <SelectValue placeholder="Assign" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {drivers?.map((d) => (
+                        <SelectItem key={d.user_id} value={d.user_id}>
+                          {d.full_name || d.phone || d.user_id.slice(0, 8)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell>
+                  <Select
+                    value={order.status}
+                    onValueChange={(v) =>
+                      updateStatus.mutate({
+                        id: order.id,
+                        status: v as OrderStatus,
+                        userId: order.user_id,
+                        totalAmount: Number(order.total_amount),
+                        deliveryAddress: order.delivery_address,
+                        deliveryPhone: order.delivery_phone,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {statuses.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+              </TableRow>
+            );
+          })}
           {!orders?.length && (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground">No orders yet</TableCell>
+              <TableCell colSpan={7} className="text-center text-muted-foreground">No orders yet</TableCell>
             </TableRow>
           )}
         </TableBody>
