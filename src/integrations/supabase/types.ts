@@ -223,6 +223,7 @@ export type Database = {
           created_at: string
           delivery_address: string | null
           delivery_phone: string | null
+          driver_id: string | null
           id: string
           notes: string | null
           status: Database["public"]["Enums"]["order_status"]
@@ -234,6 +235,7 @@ export type Database = {
           created_at?: string
           delivery_address?: string | null
           delivery_phone?: string | null
+          driver_id?: string | null
           id?: string
           notes?: string | null
           status?: Database["public"]["Enums"]["order_status"]
@@ -245,6 +247,7 @@ export type Database = {
           created_at?: string
           delivery_address?: string | null
           delivery_phone?: string | null
+          driver_id?: string | null
           id?: string
           notes?: string | null
           status?: Database["public"]["Enums"]["order_status"]
