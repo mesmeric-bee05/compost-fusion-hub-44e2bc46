@@ -113,6 +113,48 @@ export type Database = {
         }
         Relationships: []
       }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          min_order_amount: number | null
+          times_used: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          min_order_amount?: number | null
+          times_used?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          min_order_amount?: number | null
+          times_used?: number
+        }
+        Relationships: []
+      }
       forum_posts: {
         Row: {
           body: string
@@ -220,9 +262,11 @@ export type Database = {
       }
       orders: {
         Row: {
+          coupon_code: string | null
           created_at: string
           delivery_address: string | null
           delivery_phone: string | null
+          discount_amount: number | null
           driver_id: string | null
           id: string
           notes: string | null
@@ -232,9 +276,11 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          coupon_code?: string | null
           created_at?: string
           delivery_address?: string | null
           delivery_phone?: string | null
+          discount_amount?: number | null
           driver_id?: string | null
           id?: string
           notes?: string | null
@@ -244,9 +290,11 @@ export type Database = {
           user_id: string
         }
         Update: {
+          coupon_code?: string | null
           created_at?: string
           delivery_address?: string | null
           delivery_phone?: string | null
+          discount_amount?: number | null
           driver_id?: string | null
           id?: string
           notes?: string | null
@@ -318,6 +366,7 @@ export type Database = {
           comment: string | null
           created_at: string
           id: string
+          image_url: string | null
           product_id: string
           rating: number
           user_id: string
@@ -326,6 +375,7 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: string
+          image_url?: string | null
           product_id: string
           rating: number
           user_id: string
@@ -334,6 +384,7 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: string
+          image_url?: string | null
           product_id?: string
           rating?: number
           user_id?: string
@@ -523,6 +574,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_coupon: {
+        Args: { _code: string; _order_total: number }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
