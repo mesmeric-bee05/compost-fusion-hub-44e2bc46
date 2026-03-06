@@ -150,7 +150,7 @@ export default function Cart() {
     setPaymentMessage("Sending payment request to your phone…");
 
     const { data: stkData, error: stkError } = await supabase.functions.invoke("initiate-mpesa-payment", {
-      body: { orderId: order.id, phone, amount: total },
+      body: { orderId: order.id, phone, amount: finalTotal },
     });
 
     if (stkError || stkData?.error) {
