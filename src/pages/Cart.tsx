@@ -80,6 +80,27 @@ export default function Cart() {
     }, 2000);
   };
 
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setApplyingCoupon(true);
+    setCouponError("");
+    setCouponResult(null);
+    const { data, error } = await supabase.rpc("apply_coupon", {
+      _code: couponCode,
+      _order_total: total,
+    });
+    if (error) {
+      setCouponError(error.message);
+    } else if ((data as any)?.error) {
+      setCouponError((data as any).error);
+    } else {
+      setCouponResult({ discount: (data as any).discount, description: (data as any).description || "" });
+    }
+    setApplyingCoupon(false);
+  };
+
+  const finalTotal = couponResult ? Math.max(total - couponResult.discount, 0) : total;
+
   const handleCheckout = async () => {
     if (!user) { navigate("/auth"); return; }
     if (!address.trim() || !phone.trim()) {
