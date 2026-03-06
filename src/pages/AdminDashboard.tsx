@@ -8,14 +8,18 @@ import RevenueChart from "@/components/admin/RevenueChart";
 import OrdersTable from "@/components/admin/OrdersTable";
 import CollectionsTable from "@/components/admin/CollectionsTable";
 import UsersTable from "@/components/admin/UsersTable";
+import CouponsManager from "@/components/admin/CouponsManager";
+import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
 import { Button } from "@/components/ui/button";
-import { Loader2, LayoutDashboard, ShoppingCart, Recycle, Users } from "lucide-react";
+import { Loader2, LayoutDashboard, ShoppingCart, Recycle, Users, Ticket, BarChart3 } from "lucide-react";
 
 const tabs = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "orders", label: "Orders", icon: ShoppingCart },
   { id: "collections", label: "Collections", icon: Recycle },
   { id: "users", label: "Users", icon: Users },
+  { id: "coupons", label: "Coupons", icon: Ticket },
+  { id: "analytics", label: "Analytics", icon: BarChart3 },
 ] as const;
 
 type Tab = typeof tabs[number]["id"];
