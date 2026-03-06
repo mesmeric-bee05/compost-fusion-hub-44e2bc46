@@ -165,6 +165,12 @@ export default function Cart() {
     pollPaymentStatus(order.id);
   };
 
+  const removeCoupon = () => {
+    setCouponCode("");
+    setCouponResult(null);
+    setCouponError("");
+  };
+
   const resetPayment = () => {
     if (pollRef.current) clearInterval(pollRef.current);
     setPaymentState("idle");
