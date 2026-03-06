@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Plus, Minus, ShoppingBag, Loader2, Phone, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingBag, Loader2, Phone, CheckCircle2, XCircle, Clock, Ticket, X } from "lucide-react";
 
 type PaymentState = "idle" | "creating_order" | "stk_sent" | "polling" | "completed" | "failed";
 
@@ -23,6 +23,10 @@ export default function Cart() {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponResult, setCouponResult] = useState<{ discount: number; description: string } | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [paymentState, setPaymentState] = useState<PaymentState>("idle");
   const [paymentMessage, setPaymentMessage] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -76,6 +80,27 @@ export default function Cart() {
     }, 2000);
   };
 
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setApplyingCoupon(true);
+    setCouponError("");
+    setCouponResult(null);
+    const { data, error } = await supabase.rpc("apply_coupon", {
+      _code: couponCode,
+      _order_total: total,
+    });
+    if (error) {
+      setCouponError(error.message);
+    } else if ((data as any)?.error) {
+      setCouponError((data as any).error);
+    } else {
+      setCouponResult({ discount: (data as any).discount, description: (data as any).description || "" });
+    }
+    setApplyingCoupon(false);
+  };
+
+  const finalTotal = couponResult ? Math.max(total - couponResult.discount, 0) : total;
+
   const handleCheckout = async () => {
     if (!user) { navigate("/auth"); return; }
     if (!address.trim() || !phone.trim()) {
@@ -89,10 +114,12 @@ export default function Cart() {
     // 1. Create order
     const { data: order, error } = await supabase.from("orders").insert({
       user_id: user.id,
-      total_amount: total,
+      total_amount: finalTotal,
       delivery_address: address,
       delivery_phone: phone,
       notes: notes || null,
+      coupon_code: couponResult ? couponCode.toUpperCase().trim() : null,
+      discount_amount: couponResult?.discount ?? 0,
     }).select().single();
 
     if (error || !order) {
@@ -123,7 +150,7 @@ export default function Cart() {
     setPaymentMessage("Sending payment request to your phone…");
 
     const { data: stkData, error: stkError } = await supabase.functions.invoke("initiate-mpesa-payment", {
-      body: { orderId: order.id, phone, amount: total },
+      body: { orderId: order.id, phone, amount: finalTotal },
     });
 
     if (stkError || stkData?.error) {
@@ -136,6 +163,12 @@ export default function Cart() {
 
     setPaymentMessage("Check your phone for the M-Pesa prompt. Enter your PIN to pay.");
     pollPaymentStatus(order.id);
+  };
+
+  const removeCoupon = () => {
+    setCouponCode("");
+    setCouponResult(null);
+    setCouponError("");
   };
 
   const resetPayment = () => {
@@ -227,8 +260,50 @@ export default function Cart() {
                 onChange={e => setNotes(e.target.value)}
                 disabled={isProcessing}
               />
-              <div className="flex justify-between border-t pt-4 font-display text-lg font-bold">
-                <span>Total</span><span>{formatPrice(total)}</span>
+              {/* Coupon Code */}
+              <div className="space-y-2">
+                {couponResult ? (
+                  <div className="flex items-center justify-between rounded-lg bg-accent p-3">
+                    <div className="flex items-center gap-2">
+                      <Ticket className="h-4 w-4 text-primary" />
+                      <div>
+                        <span className="text-sm font-medium text-accent-foreground">{couponCode.toUpperCase()}</span>
+                        <p className="text-xs text-muted-foreground">-{formatPrice(couponResult.discount)}</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={removeCoupon} disabled={isProcessing}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Coupon code"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.slice(0, 20))}
+                      disabled={isProcessing}
+                      className="uppercase"
+                    />
+                    <Button variant="outline" onClick={applyCoupon} disabled={!couponCode.trim() || isProcessing || applyingCoupon}>
+                      {applyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                    </Button>
+                  </div>
+                )}
+                {couponError && <p className="text-xs text-destructive">{couponError}</p>}
+              </div>
+
+              <div className="border-t pt-4 space-y-1">
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Subtotal</span><span>{formatPrice(total)}</span>
+                </div>
+                {couponResult && (
+                  <div className="flex justify-between text-sm text-primary">
+                    <span>Discount</span><span>-{formatPrice(couponResult.discount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-display text-lg font-bold text-foreground">
+                  <span>Total</span><span>{formatPrice(finalTotal)}</span>
+                </div>
               </div>
 
               {/* Payment Status Indicator */}
@@ -272,7 +347,7 @@ export default function Cart() {
                     ? "Sign in to Checkout"
                     : isProcessing
                     ? "Processing…"
-                    : `Pay ${formatPrice(total)} via M-Pesa`}
+                    : `Pay ${formatPrice(finalTotal)} via M-Pesa`}
                 </Button>
               )}
 

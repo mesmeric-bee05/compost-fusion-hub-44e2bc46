@@ -3,6 +3,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { useProduct } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
+import ProductReviews from "@/components/reviews/ProductReviews";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
@@ -76,6 +77,9 @@ export default function ProductDetail() {
             )}
           </div>
         </div>
+
+        {/* Reviews Section */}
+        <ProductReviews productId={product.id} />
       </main>
       <Footer />
     </div>
