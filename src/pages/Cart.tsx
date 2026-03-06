@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Plus, Minus, ShoppingBag, Loader2, Phone, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingBag, Loader2, Phone, CheckCircle2, XCircle, Clock, Ticket, X } from "lucide-react";
 
 type PaymentState = "idle" | "creating_order" | "stk_sent" | "polling" | "completed" | "failed";
 
