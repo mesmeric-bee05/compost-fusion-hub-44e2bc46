@@ -347,7 +347,7 @@ export default function Cart() {
                     ? "Sign in to Checkout"
                     : isProcessing
                     ? "Processing…"
-                    : `Pay ${formatPrice(total)} via M-Pesa`}
+                    : `Pay ${formatPrice(finalTotal)} via M-Pesa`}
                 </Button>
               )}
 
