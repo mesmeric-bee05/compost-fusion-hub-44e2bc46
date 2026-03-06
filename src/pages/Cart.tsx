@@ -114,10 +114,12 @@ export default function Cart() {
     // 1. Create order
     const { data: order, error } = await supabase.from("orders").insert({
       user_id: user.id,
-      total_amount: total,
+      total_amount: finalTotal,
       delivery_address: address,
       delivery_phone: phone,
       notes: notes || null,
+      coupon_code: couponResult ? couponCode.toUpperCase().trim() : null,
+      discount_amount: couponResult?.discount ?? 0,
     }).select().single();
 
     if (error || !order) {
