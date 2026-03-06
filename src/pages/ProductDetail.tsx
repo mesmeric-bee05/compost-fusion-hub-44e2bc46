@@ -77,6 +77,9 @@ export default function ProductDetail() {
             )}
           </div>
         </div>
+
+        {/* Reviews Section */}
+        <ProductReviews productId={product.id} />
       </main>
       <Footer />
     </div>
