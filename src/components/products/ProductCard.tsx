@@ -2,9 +2,10 @@ import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Leaf, Heart } from "lucide-react";
+import { ShoppingCart, Leaf, Heart, GitCompareArrows } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/hooks/useWishlist";
+import { useCompare } from "@/hooks/useCompare";
 import type { Product } from "@/hooks/useProducts";
 
 interface Props {
