@@ -184,6 +184,7 @@ export default function OrderTracking() {
         {/* Status History Timeline */}
         <StatusTimeline orderId={orderId!} />
 
+        <div className="grid gap-6 md:grid-cols-2">
 
           {/* Order Items */}
           <Card>
