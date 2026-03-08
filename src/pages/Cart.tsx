@@ -19,6 +19,7 @@ type PaymentState = "idle" | "creating_order" | "stk_sent" | "polling" | "comple
 export default function Cart() {
   const { items, updateQuantity, removeItem, clearCart, total } = useCart();
   const { user } = useAuth();
+  const { checkBadges } = useCheckBadges();
   const navigate = useNavigate();
 
   const [address, setAddress] = useState("");
