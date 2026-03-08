@@ -40,6 +40,13 @@ export default function ProductCard({ product, onAddToCart }: Props) {
               <Badge variant="destructive" className="text-sm">Out of Stock</Badge>
             </div>
           )}
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCompare(product.id); }}
+            className={`absolute top-2 left-2 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-sm transition-colors ${isComparing(product.id) ? "bg-primary text-primary-foreground" : "bg-background/80 text-muted-foreground hover:bg-background"}`}
+            title={isComparing(product.id) ? "Remove from compare" : compareCount >= 3 ? "Max 3 products" : "Add to compare"}
+          >
+            <GitCompareArrows className="h-4 w-4" />
+          </button>
           {user && (
             <button
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(product.id); }}

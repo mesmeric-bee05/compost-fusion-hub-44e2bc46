@@ -42,6 +42,17 @@ export default function Products() {
           </div>
         )}
       </main>
+      {compareCount > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm">
+          <div className="container flex items-center justify-between py-3">
+            <span className="text-sm font-medium text-foreground">
+              <GitCompareArrows className="mr-2 inline h-4 w-4 text-primary" />
+              {compareCount} product{compareCount > 1 ? "s" : ""} selected
+            </span>
+            <Button asChild size="sm"><Link to="/compare">Compare Now</Link></Button>
+          </div>
+        </div>
+      )}
       <Footer />
     </div>
   );
