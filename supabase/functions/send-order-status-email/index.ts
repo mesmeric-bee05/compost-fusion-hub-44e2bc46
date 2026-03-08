@@ -46,7 +46,47 @@ const statusMessages: Record<string, { subject: string; headline: string; body: 
 const formatKES = (n: number) =>
   new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(n);
 
-const buildEmailHtml = (data: OrderStatusEmailRequest, customerEmail: string, info: typeof statusMessages[string]) => `
+interface OrderItem {
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  product_name: string;
+  product_image: string | null;
+}
+
+const buildItemRowsHtml = (items: OrderItem[]) =>
+  items
+    .map(
+      (item) => `
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          ${
+            item.product_image
+              ? `<img src="${item.product_image}" alt="${item.product_name}" style="width:56px;height:56px;border-radius:8px;object-fit:cover;" />`
+              : `<div style="width:56px;height:56px;border-radius:8px;background:#f3f4f6;"></div>`
+          }
+          <div>
+            <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">${item.product_name}</p>
+            <p style="margin:2px 0 0;font-size:12px;color:#6b7280;">Qty: ${item.quantity} × ${formatKES(item.unit_price)}</p>
+          </div>
+        </div>
+      </td>
+      <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-size:14px;font-weight:600;color:#111827;vertical-align:middle;">
+        ${formatKES(item.total_price)}
+      </td>
+    </tr>`
+    )
+    .join("");
+
+const buildEmailHtml = (
+  data: OrderStatusEmailRequest,
+  info: typeof statusMessages[string],
+  items: OrderItem[],
+  trackingUrl: string,
+  mpesaReceipt: string | null,
+  discountAmount: number
+) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -69,7 +109,19 @@ const buildEmailHtml = (data: OrderStatusEmailRequest, customerEmail: string, in
             <td style="padding:40px 40px 32px;">
               <p style="font-size:16px;color:#374151;margin:0 0 16px;">Hi ${data.customerName},</p>
               <p style="font-size:16px;color:#374151;margin:0 0 32px;line-height:1.6;">${info.body}</p>
-              <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:24px;margin-bottom:32px;">
+
+              <!-- Order Items -->
+              ${items.length > 0 ? `
+              <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:24px;margin-bottom:24px;">
+                <h3 style="margin:0 0 16px;font-size:14px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;">Items Ordered</h3>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  ${buildItemRowsHtml(items)}
+                </table>
+              </div>
+              ` : ""}
+
+              <!-- Order Summary -->
+              <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:24px;margin-bottom:24px;">
                 <h3 style="margin:0 0 16px;font-size:14px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;">Order Summary</h3>
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr>
@@ -82,10 +134,22 @@ const buildEmailHtml = (data: OrderStatusEmailRequest, customerEmail: string, in
                       <span style="background:${info.color}20;color:${info.color};font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px;text-transform:capitalize;">${data.orderStatus}</span>
                     </td>
                   </tr>
+                  ${discountAmount > 0 ? `
+                  <tr>
+                    <td style="padding:6px 0;font-size:14px;color:#374151;">Discount</td>
+                    <td style="padding:6px 0;font-size:14px;color:#22c55e;text-align:right;">-${formatKES(discountAmount)}</td>
+                  </tr>
+                  ` : ""}
                   <tr style="border-top:1px solid #e5e7eb;">
                     <td style="padding:12px 0 6px;font-size:15px;font-weight:600;color:#111827;">Total Amount</td>
                     <td style="padding:12px 0 6px;font-size:15px;font-weight:700;color:${info.color};text-align:right;">${formatKES(data.totalAmount)}</td>
                   </tr>
+                  ${mpesaReceipt ? `
+                  <tr>
+                    <td style="padding:4px 0;font-size:13px;color:#6b7280;">M-Pesa Receipt</td>
+                    <td style="padding:4px 0;font-size:13px;color:#374151;text-align:right;font-family:monospace;">${mpesaReceipt}</td>
+                  </tr>
+                  ` : ""}
                   ${data.deliveryAddress ? `
                   <tr>
                     <td style="padding:4px 0;font-size:13px;color:#6b7280;">Delivery Address</td>
@@ -94,6 +158,12 @@ const buildEmailHtml = (data: OrderStatusEmailRequest, customerEmail: string, in
                   ` : ""}
                 </table>
               </div>
+
+              <!-- Track Order Button -->
+              <div style="text-align:center;margin-bottom:32px;">
+                <a href="${trackingUrl}" style="display:inline-block;background:${info.color};color:#ffffff;font-size:16px;font-weight:600;padding:14px 32px;border-radius:8px;text-decoration:none;">Track Your Order →</a>
+              </div>
+
               <p style="font-size:14px;color:#6b7280;line-height:1.6;margin:0 0 8px;">
                 Questions about your order? Contact us at 
                 <a href="mailto:info@captaincompost.co.ke" style="color:#22c55e;">info@captaincompost.co.ke</a>
@@ -145,13 +215,66 @@ serve(async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Get user email
     const { data: userData, error: userError } = await adminClient.auth.admin.getUserById(userId);
     if (userError || !userData?.user?.email) {
       throw new Error(`Could not resolve user email for userId=${userId}: ${userError?.message}`);
     }
-
     const customerEmail = userData.user.email;
-    const html = buildEmailHtml(body, customerEmail, info);
+
+    // Get order items with product details
+    const { data: orderItems } = await adminClient
+      .from("order_items")
+      .select("quantity, unit_price, total_price, product_id")
+      .eq("order_id", orderId);
+
+    let items: OrderItem[] = [];
+    if (orderItems?.length) {
+      const productIds = orderItems.map((oi) => oi.product_id);
+      const { data: products } = await adminClient
+        .from("products")
+        .select("id, name, image_url")
+        .in("id", productIds);
+
+      const productMap = new Map(products?.map((p) => [p.id, p]) ?? []);
+      items = orderItems.map((oi) => {
+        const prod = productMap.get(oi.product_id);
+        return {
+          quantity: oi.quantity,
+          unit_price: oi.unit_price,
+          total_price: oi.total_price,
+          product_name: prod?.name || "Product",
+          product_image: prod?.image_url || null,
+        };
+      });
+    }
+
+    // Get M-Pesa receipt if available
+    const { data: payment } = await adminClient
+      .from("payments")
+      .select("mpesa_receipt_number")
+      .eq("order_id", orderId)
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Get discount amount
+    const { data: orderData } = await adminClient
+      .from("orders")
+      .select("discount_amount")
+      .eq("id", orderId)
+      .single();
+
+    const trackingUrl = `https://compost-fusion-hub.lovable.app/orders/${orderId}`;
+    const html = buildEmailHtml(
+      body,
+      info,
+      items,
+      trackingUrl,
+      payment?.mpesa_receipt_number || null,
+      orderData?.discount_amount || 0
+    );
 
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",

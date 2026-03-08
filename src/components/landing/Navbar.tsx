@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Menu, X, Leaf, ShoppingCart, User, LayoutDashboard, LogOut, Settings, Shield, Truck } from "lucide-react";
+import { Menu, X, Leaf, ShoppingCart, Heart, User, LayoutDashboard, LogOut, Settings, Shield, Truck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +41,11 @@ const Navbar = () => {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
+          {user && (
+            <Button variant="ghost" size="icon" asChild>
+              <Link to="/wishlist"><Heart className="h-5 w-5" /></Link>
+            </Button>
+          )}
           <Button variant="ghost" size="icon" asChild className="relative">
             <Link to="/cart">
               <ShoppingCart className="h-5 w-5" />
