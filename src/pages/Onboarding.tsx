@@ -241,7 +241,7 @@ const collectionSchema = z.object({
   pickup_date: z.string().min(1, "Pick a date"),
 });
 
-function CollectionStep({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+function CollectionStep({ onBack, onComplete, onSkip }: { onBack: () => void; onComplete: () => void; onSkip: () => void }) {
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
@@ -283,11 +283,6 @@ function CollectionStep({ onBack, onComplete }: { onBack: () => void; onComplete
     } else {
       onComplete();
     }
-  };
-
-  const handleSkip = () => {
-    setSkippedCollection(true);
-    markOnboardingDone();
   };
 
   return (
