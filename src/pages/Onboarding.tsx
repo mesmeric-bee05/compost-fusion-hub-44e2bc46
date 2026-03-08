@@ -285,7 +285,10 @@ function CollectionStep({ onBack, onComplete }: { onBack: () => void; onComplete
     }
   };
 
-  const handleSkip = () => onComplete();
+  const handleSkip = () => {
+    setSkippedCollection(true);
+    markOnboardingDone();
+  };
 
   return (
     <div>
