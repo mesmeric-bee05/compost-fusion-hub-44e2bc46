@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import MarkdownEditor from "@/components/admin/MarkdownEditor";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -298,12 +298,11 @@ export default function ContentManager() {
               </div>
             </div>
             <div>
-              <Label>Body / Content</Label>
-              <Textarea
+              <Label>Body / Content (Markdown supported)</Label>
+              <MarkdownEditor
                 value={form.body}
-                onChange={(e) => updateField("body", e.target.value)}
-                placeholder="Write your article content here..."
-                className="min-h-[200px]"
+                onChange={(v) => updateField("body", v)}
+                placeholder="Write your article content using Markdown..."
               />
             </div>
             <div className="grid grid-cols-2 gap-4">

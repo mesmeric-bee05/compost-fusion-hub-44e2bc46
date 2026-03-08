@@ -5,6 +5,7 @@ import Footer from "@/components/landing/Footer";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useCheckBadges } from "@/hooks/useCheckBadges";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,6 +19,7 @@ type PaymentState = "idle" | "creating_order" | "stk_sent" | "polling" | "comple
 export default function Cart() {
   const { items, updateQuantity, removeItem, clearCart, total } = useCart();
   const { user } = useAuth();
+  const { checkBadges } = useCheckBadges();
   const navigate = useNavigate();
 
   const [address, setAddress] = useState("");
@@ -63,6 +65,7 @@ export default function Cart() {
         setPaymentState("completed");
         setPaymentMessage(`Payment confirmed! Receipt: ${data.mpesa_receipt_number}`);
         clearCart();
+        checkBadges(); // Fire-and-forget badge check after successful order
         toast({ title: "Payment successful! 🎉", description: "Your order has been confirmed." });
         setTimeout(() => navigate("/dashboard"), 2500);
       } else if (data?.status === "failed") {

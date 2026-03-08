@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useCheckBadges } from "@/hooks/useCheckBadges";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,6 +46,7 @@ type FormValues = z.infer<typeof schema>;
 export default function CollectionRequestForm() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { checkBadges } = useCheckBadges();
   const [loading, setLoading] = useState(false);
 
   const form = useForm<FormValues>({
@@ -78,6 +80,7 @@ export default function CollectionRequestForm() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Request submitted!", description: "We'll confirm your pickup soon." });
+      checkBadges(); // Fire-and-forget badge check
       navigate("/dashboard");
     }
   };
