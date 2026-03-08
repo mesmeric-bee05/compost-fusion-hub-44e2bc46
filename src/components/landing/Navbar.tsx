@@ -6,6 +6,7 @@ import { Menu, X, Leaf, ShoppingCart, Heart, User, LayoutDashboard, LogOut, Sett
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { Badge } from "@/components/ui/badge";
+import NotificationCenter from "@/components/notifications/NotificationCenter";
 
 const navLinks = [
   { label: "Products", href: "/products" },
