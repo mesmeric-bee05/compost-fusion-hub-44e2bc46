@@ -21,6 +21,7 @@ import DriverDashboard from "./pages/DriverDashboard";
 import OrderTracking from "./pages/OrderTracking";
 import Wishlist from "./pages/Wishlist";
 import Compare from "./pages/Compare";
+import NotificationPreferences from "./pages/NotificationPreferences";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
