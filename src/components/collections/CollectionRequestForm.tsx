@@ -46,6 +46,7 @@ type FormValues = z.infer<typeof schema>;
 export default function CollectionRequestForm() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { checkBadges } = useCheckBadges();
   const [loading, setLoading] = useState(false);
 
   const form = useForm<FormValues>({
