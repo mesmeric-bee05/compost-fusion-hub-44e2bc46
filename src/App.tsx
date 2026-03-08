@@ -20,6 +20,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import DriverDashboard from "./pages/DriverDashboard";
 import OrderTracking from "./pages/OrderTracking";
 import Wishlist from "./pages/Wishlist";
+import Compare from "./pages/Compare";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
