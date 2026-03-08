@@ -65,6 +65,7 @@ export default function Cart() {
         setPaymentState("completed");
         setPaymentMessage(`Payment confirmed! Receipt: ${data.mpesa_receipt_number}`);
         clearCart();
+        checkBadges(); // Fire-and-forget badge check after successful order
         toast({ title: "Payment successful! 🎉", description: "Your order has been confirmed." });
         setTimeout(() => navigate("/dashboard"), 2500);
       } else if (data?.status === "failed") {
