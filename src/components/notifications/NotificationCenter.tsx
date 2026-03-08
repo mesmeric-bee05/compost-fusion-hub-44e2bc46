@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Bell, Check, CheckCheck, Package, Truck, Award, Filter } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { Bell, Check, CheckCheck, Package, Truck, Award, Filter, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
