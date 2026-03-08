@@ -1,18 +1,22 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import ProductCard from "@/components/products/ProductCard";
 import ProductFilters from "@/components/products/ProductFilters";
 import { useProducts } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
+import { useCompare } from "@/hooks/useCompare";
 import { toast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, GitCompareArrows } from "lucide-react";
 
 export default function Products() {
   const [category, setCategory] = useState("all");
   const [search, setSearch] = useState("");
   const { data: products, isLoading } = useProducts(category, search);
   const { addItem } = useCart();
+  const { count: compareCount } = useCompare();
 
   const handleAdd = (product: any) => {
     addItem(product);
@@ -38,6 +42,17 @@ export default function Products() {
           </div>
         )}
       </main>
+      {compareCount > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm">
+          <div className="container flex items-center justify-between py-3">
+            <span className="text-sm font-medium text-foreground">
+              <GitCompareArrows className="mr-2 inline h-4 w-4 text-primary" />
+              {compareCount} product{compareCount > 1 ? "s" : ""} selected
+            </span>
+            <Button asChild size="sm"><Link to="/compare">Compare Now</Link></Button>
+          </div>
+        </div>
+      )}
       <Footer />
     </div>
   );

@@ -6,6 +6,7 @@ import { Menu, X, Leaf, ShoppingCart, Heart, User, LayoutDashboard, LogOut, Sett
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { Badge } from "@/components/ui/badge";
+import NotificationCenter from "@/components/notifications/NotificationCenter";
 
 const navLinks = [
   { label: "Products", href: "/products" },
@@ -42,9 +43,12 @@ const Navbar = () => {
 
         <div className="hidden items-center gap-2 md:flex">
           {user && (
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/wishlist"><Heart className="h-5 w-5" /></Link>
-            </Button>
+            <>
+              <NotificationCenter />
+              <Button variant="ghost" size="icon" asChild>
+                <Link to="/wishlist"><Heart className="h-5 w-5" /></Link>
+              </Button>
+            </>
           )}
           <Button variant="ghost" size="icon" asChild className="relative">
             <Link to="/cart">

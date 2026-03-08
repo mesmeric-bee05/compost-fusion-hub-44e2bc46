@@ -2,9 +2,10 @@ import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Leaf, Heart } from "lucide-react";
+import { ShoppingCart, Leaf, Heart, GitCompareArrows } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/hooks/useWishlist";
+import { useCompare } from "@/hooks/useCompare";
 import type { Product } from "@/hooks/useProducts";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 export default function ProductCard({ product, onAddToCart }: Props) {
   const { user } = useAuth();
   const { wishlistIds, toggleWishlist, isToggling } = useWishlist();
+  const { isComparing, toggle: toggleCompare, count: compareCount } = useCompare();
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(price);
@@ -38,6 +40,13 @@ export default function ProductCard({ product, onAddToCart }: Props) {
               <Badge variant="destructive" className="text-sm">Out of Stock</Badge>
             </div>
           )}
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCompare(product.id); }}
+            className={`absolute top-2 left-2 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-sm transition-colors ${isComparing(product.id) ? "bg-primary text-primary-foreground" : "bg-background/80 text-muted-foreground hover:bg-background"}`}
+            title={isComparing(product.id) ? "Remove from compare" : compareCount >= 3 ? "Max 3 products" : "Add to compare"}
+          >
+            <GitCompareArrows className="h-4 w-4" />
+          </button>
           {user && (
             <button
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(product.id); }}
