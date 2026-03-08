@@ -2,7 +2,9 @@ import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Leaf } from "lucide-react";
+import { ShoppingCart, Leaf, Heart } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useWishlist } from "@/hooks/useWishlist";
 import type { Product } from "@/hooks/useProducts";
 
 interface Props {
@@ -11,10 +13,14 @@ interface Props {
 }
 
 export default function ProductCard({ product, onAddToCart }: Props) {
+  const { user } = useAuth();
+  const { wishlistIds, toggleWishlist, isToggling } = useWishlist();
+
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(price);
 
   const outOfStock = product.stock_quantity <= 0;
+  const isWished = wishlistIds.includes(product.id);
 
   return (
     <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
@@ -31,6 +37,15 @@ export default function ProductCard({ product, onAddToCart }: Props) {
             <div className="absolute inset-0 flex items-center justify-center bg-background/60">
               <Badge variant="destructive" className="text-sm">Out of Stock</Badge>
             </div>
+          )}
+          {user && (
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(product.id); }}
+              disabled={isToggling}
+              className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-colors hover:bg-background"
+            >
+              <Heart className={`h-4 w-4 ${isWished ? "fill-destructive text-destructive" : "text-muted-foreground"}`} />
+            </button>
           )}
         </div>
       </Link>
