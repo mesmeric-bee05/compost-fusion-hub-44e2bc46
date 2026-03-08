@@ -298,12 +298,11 @@ export default function ContentManager() {
               </div>
             </div>
             <div>
-              <Label>Body / Content</Label>
-              <Textarea
+              <Label>Body / Content (Markdown supported)</Label>
+              <MarkdownEditor
                 value={form.body}
-                onChange={(e) => updateField("body", e.target.value)}
-                placeholder="Write your article content here..."
-                className="min-h-[200px]"
+                onChange={(v) => updateField("body", v)}
+                placeholder="Write your article content using Markdown..."
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
