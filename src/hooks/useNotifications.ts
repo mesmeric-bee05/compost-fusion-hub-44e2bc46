@@ -34,7 +34,15 @@ export function useNotifications() {
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  // Realtime subscription
+  // Request browser notification permission on mount
+  useEffect(() => {
+    if (!user) return;
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, [user]);
+
+  // Realtime subscription + browser push
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -42,8 +50,23 @@ export function useNotifications() {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        () => {
+        (payload) => {
           qc.invalidateQueries({ queryKey: ["notifications", user.id] });
+
+          // Show browser notification if permission granted
+          if ("Notification" in window && Notification.permission === "granted") {
+            const n = payload.new as Notification;
+            const browserNotif = new window.Notification(n.title, {
+              body: n.message || undefined,
+              icon: "/favicon.ico",
+              tag: n.id,
+            });
+            browserNotif.onclick = () => {
+              window.focus();
+              if (n.link) window.location.href = n.link;
+              browserNotif.close();
+            };
+          }
         }
       )
       .subscribe();
