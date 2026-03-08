@@ -80,6 +80,7 @@ export default function CollectionRequestForm() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Request submitted!", description: "We'll confirm your pickup soon." });
+      checkBadges(); // Fire-and-forget badge check
       navigate("/dashboard");
     }
   };
