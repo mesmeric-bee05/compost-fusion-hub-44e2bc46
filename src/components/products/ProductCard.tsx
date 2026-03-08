@@ -16,6 +16,7 @@ interface Props {
 export default function ProductCard({ product, onAddToCart }: Props) {
   const { user } = useAuth();
   const { wishlistIds, toggleWishlist, isToggling } = useWishlist();
+  const { isComparing, toggle: toggleCompare, count: compareCount } = useCompare();
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(price);
