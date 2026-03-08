@@ -350,7 +350,7 @@ function CollectionStep({ onBack, onComplete, onSkip }: { onBack: () => void; on
             </Button>
           </div>
 
-          <Button type="button" variant="ghost" className="w-full text-muted-foreground" onClick={handleSkip}>
+          <Button type="button" variant="ghost" className="w-full text-muted-foreground" onClick={onSkip}>
             Skip for now <ArrowRight className="ml-1 h-4 w-4" />
           </Button>
         </form>
