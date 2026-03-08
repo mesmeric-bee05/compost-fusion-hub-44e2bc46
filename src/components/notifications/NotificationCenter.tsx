@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Check, CheckCheck, Package, Truck, Award } from "lucide-react";
+import { Bell, Check, CheckCheck, Package, Truck, Award, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -13,9 +14,19 @@ const typeIcons: Record<string, typeof Package> = {
   reward_achievement: Award,
 };
 
+const filterOptions = [
+  { value: "all", label: "All" },
+  { value: "order_update", label: "Orders" },
+  { value: "collection_reminder", label: "Collections" },
+  { value: "reward_achievement", label: "Rewards" },
+] as const;
+
 export default function NotificationCenter() {
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const [filter, setFilter] = useState<string>("all");
+
+  const filtered = filter === "all" ? notifications : notifications.filter((n) => n.type === filter);
 
   return (
     <Popover>
@@ -39,11 +50,29 @@ export default function NotificationCenter() {
             </Button>
           )}
         </div>
-        <ScrollArea className="max-h-80">
-          {notifications.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-muted-foreground">No notifications yet</p>
+
+        {/* Filter tabs */}
+        <div className="flex gap-1 border-b border-border px-3 py-2">
+          {filterOptions.map((opt) => (
+            <Button
+              key={opt.value}
+              variant={filter === opt.value ? "default" : "ghost"}
+              size="sm"
+              className="h-6 rounded-full px-2.5 text-[11px]"
+              onClick={() => setFilter(opt.value)}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </div>
+
+        <ScrollArea className="max-h-72">
+          {filtered.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+              {filter === "all" ? "No notifications yet" : "No notifications in this category"}
+            </p>
           ) : (
-            notifications.map((n) => {
+            filtered.map((n) => {
               const Icon = typeIcons[n.type] || Bell;
               return (
                 <button

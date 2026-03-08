@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, Package, CreditCard, Truck, CheckCircle2, XCircle, Clock, MapPin, Phone, ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
+import StatusTimeline from "@/components/orders/StatusTimeline";
 
 const ORDER_STEPS = ["pending", "confirmed", "shipped", "delivered"] as const;
 
