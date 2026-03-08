@@ -218,6 +218,45 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          browser_collection_reminders: boolean
+          browser_order_updates: boolean
+          browser_reward_achievements: boolean
+          created_at: string
+          email_collection_reminders: boolean
+          email_order_updates: boolean
+          email_reward_achievements: boolean
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          browser_collection_reminders?: boolean
+          browser_order_updates?: boolean
+          browser_reward_achievements?: boolean
+          created_at?: string
+          email_collection_reminders?: boolean
+          email_order_updates?: boolean
+          email_reward_achievements?: boolean
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          browser_collection_reminders?: boolean
+          browser_order_updates?: boolean
+          browser_reward_achievements?: boolean
+          created_at?: string
+          email_collection_reminders?: boolean
+          email_order_updates?: boolean
+          email_reward_achievements?: boolean
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string

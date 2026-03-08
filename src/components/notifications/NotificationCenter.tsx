@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Bell, Check, CheckCheck, Package, Truck, Award, Filter } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { Bell, Check, CheckCheck, Package, Truck, Award, Filter, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -99,6 +99,15 @@ export default function NotificationCenter() {
             })
           )}
         </ScrollArea>
+
+        <div className="border-t border-border px-4 py-2">
+          <Button variant="ghost" size="sm" className="h-auto w-full justify-center px-2 py-1.5 text-xs text-muted-foreground" asChild>
+            <Link to="/notification-preferences">
+              <Settings className="mr-1 h-3 w-3" />
+              Notification Settings
+            </Link>
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   );

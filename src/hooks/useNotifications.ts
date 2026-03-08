@@ -1,7 +1,8 @@
-import { useEffect, useCallback } from "react";
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useNotificationPreferences } from "@/hooks/useNotificationPreferences";
 
 interface Notification {
   id: string;
@@ -17,6 +18,7 @@ interface Notification {
 export function useNotifications() {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { shouldShowBrowser } = useNotificationPreferences();
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ["notifications", user?.id],
@@ -42,7 +44,7 @@ export function useNotifications() {
     }
   }, [user]);
 
-  // Realtime subscription + browser push
+  // Realtime subscription + browser push (respects preferences)
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -53,9 +55,14 @@ export function useNotifications() {
         (payload) => {
           qc.invalidateQueries({ queryKey: ["notifications", user.id] });
 
-          // Show browser notification if permission granted
-          if ("Notification" in window && Notification.permission === "granted") {
-            const n = payload.new as Notification;
+          const n = payload.new as Notification;
+
+          // Check user's browser notification preferences
+          if (
+            "Notification" in window &&
+            Notification.permission === "granted" &&
+            shouldShowBrowser(n.type)
+          ) {
             const browserNotif = new window.Notification(n.title, {
               body: n.message || undefined,
               icon: "/favicon.ico",
@@ -71,7 +78,7 @@ export function useNotifications() {
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user, qc]);
+  }, [user, qc, shouldShowBrowser]);
 
   const markAsRead = useMutation({
     mutationFn: async (id: string) => {
