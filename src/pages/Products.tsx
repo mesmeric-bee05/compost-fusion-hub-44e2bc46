@@ -16,6 +16,7 @@ export default function Products() {
   const [search, setSearch] = useState("");
   const { data: products, isLoading } = useProducts(category, search);
   const { addItem } = useCart();
+  const { count: compareCount } = useCompare();
 
   const handleAdd = (product: any) => {
     addItem(product);
