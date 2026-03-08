@@ -454,12 +454,8 @@ export default function Onboarding() {
                 ) : (
                   <CollectionStep
                     onBack={() => setStep(1)}
-                    onComplete={() => {
-                      // We need to distinguish skip vs submit — handled by the component calling onComplete
-                      // The CollectionStep calls onComplete for both submit and skip
-                      // We'll track it differently
-                      handleCollectionComplete();
-                    }}
+                    onComplete={handleCollectionComplete}
+                    onSkip={handleCollectionSkip}
                   />
                 )}
               </motion.div>
