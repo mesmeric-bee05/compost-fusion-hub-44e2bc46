@@ -22,6 +22,7 @@ import OrderTracking from "./pages/OrderTracking";
 import Wishlist from "./pages/Wishlist";
 import Compare from "./pages/Compare";
 import NotificationPreferences from "./pages/NotificationPreferences";
+import Onboarding from "./pages/Onboarding";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
           <Route path="/orders/:orderId" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
           <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
           <Route path="/notification-preferences" element={<ProtectedRoute><NotificationPreferences /></ProtectedRoute>} />
+          <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
