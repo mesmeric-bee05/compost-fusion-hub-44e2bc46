@@ -10,8 +10,9 @@ import CollectionsTable from "@/components/admin/CollectionsTable";
 import UsersTable from "@/components/admin/UsersTable";
 import CouponsManager from "@/components/admin/CouponsManager";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
+import ContentManager from "@/components/admin/ContentManager";
 import { Button } from "@/components/ui/button";
-import { Loader2, LayoutDashboard, ShoppingCart, Recycle, Users, Ticket, BarChart3 } from "lucide-react";
+import { Loader2, LayoutDashboard, ShoppingCart, Recycle, Users, Ticket, BarChart3, BookOpen } from "lucide-react";
 
 const tabs = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -19,6 +20,7 @@ const tabs = [
   { id: "collections", label: "Collections", icon: Recycle },
   { id: "users", label: "Users", icon: Users },
   { id: "coupons", label: "Coupons", icon: Ticket },
+  { id: "content", label: "Content", icon: BookOpen },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
 ] as const;
 
@@ -65,6 +67,7 @@ export default function AdminDashboard() {
         {tab === "collections" && <CollectionsTable />}
         {tab === "users" && <UsersTable />}
         {tab === "coupons" && <CouponsManager />}
+        {tab === "content" && <ContentManager />}
         {tab === "analytics" && <AnalyticsDashboard />}
       </div>
       <Footer />
