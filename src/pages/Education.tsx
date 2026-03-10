@@ -7,11 +7,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BookOpen, Loader2, Video, FileText, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { BookOpen, Loader2, Video, FileText, Search, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import SocialShareButtons from "@/components/education/SocialShareButtons";
+
+function getReadingTime(text: string | null): number {
+  if (!text) return 1;
+  const words = text.replace(/[#*_\[\]`>]/g, "").split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.ceil(words / 200));
+}
 
 interface ContentItem {
   id: string;
