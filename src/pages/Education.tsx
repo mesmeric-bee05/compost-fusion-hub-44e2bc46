@@ -218,6 +218,12 @@ export default function Education() {
               <Badge variant="outline" className="capitalize">{selectedArticle?.content_type}</Badge>
             </div>
             <DialogTitle className="font-display text-2xl">{selectedArticle?.title}</DialogTitle>
+            {selectedArticle?.body && (
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Clock className="h-3.5 w-3.5" />
+                <span>{getReadingTime(selectedArticle.body)} min read</span>
+              </div>
+            )}
           </DialogHeader>
 
           {selectedArticle?.image_url && (
