@@ -7,11 +7,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BookOpen, Loader2, Video, FileText, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { BookOpen, Loader2, Video, FileText, Search, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import SocialShareButtons from "@/components/education/SocialShareButtons";
+
+function getReadingTime(text: string | null): number {
+  if (!text) return 1;
+  const words = text.replace(/[#*_\[\]`>]/g, "").split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.ceil(words / 200));
+}
 
 interface ContentItem {
   id: string;
@@ -149,6 +155,10 @@ export default function Education() {
                       </Badge>
                     </div>
                     <h3 className="font-display text-lg font-semibold text-foreground">{c.title}</h3>
+                    <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      <span>{getReadingTime(c.body)} min read</span>
+                    </div>
                     <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">
                       {c.body?.replace(/[#*_\[\]`>]/g, "").slice(0, 150)}...
                     </p>
@@ -208,6 +218,12 @@ export default function Education() {
               <Badge variant="outline" className="capitalize">{selectedArticle?.content_type}</Badge>
             </div>
             <DialogTitle className="font-display text-2xl">{selectedArticle?.title}</DialogTitle>
+            {selectedArticle?.body && (
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Clock className="h-3.5 w-3.5" />
+                <span>{getReadingTime(selectedArticle.body)} min read</span>
+              </div>
+            )}
           </DialogHeader>
 
           {selectedArticle?.image_url && (
@@ -241,6 +257,38 @@ export default function Education() {
               <SocialShareButtons title={selectedArticle.title} slug={selectedArticle.slug} />
             </div>
           )}
+
+          {/* Related Articles */}
+          {selectedArticle && (() => {
+            const related = (content || [])
+              .filter((c) => c.category === selectedArticle.category && c.id !== selectedArticle.id)
+              .slice(0, 3);
+            if (!related.length) return null;
+            return (
+              <div className="border-t pt-4">
+                <h4 className="mb-3 font-display text-sm font-semibold text-foreground">Related Articles</h4>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {related.map((r) => (
+                    <Card
+                      key={r.id}
+                      className="cursor-pointer overflow-hidden transition-shadow hover:shadow-md"
+                      onClick={() => setSelectedArticle(r)}
+                    >
+                      {r.image_url && (
+                        <img src={r.image_url} alt={r.title} className="aspect-video w-full object-cover" />
+                      )}
+                      <CardContent className="p-3">
+                        <p className="line-clamp-2 text-sm font-medium text-foreground">{r.title}</p>
+                        <span className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" /> {getReadingTime(r.body)} min
+                        </span>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
