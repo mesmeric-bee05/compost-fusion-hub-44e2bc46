@@ -44,7 +44,12 @@ export default function Education() {
   });
 
   const categories = [...new Set((content || []).map((c) => c.category))];
-  const filtered = categoryFilter === "all" ? content : content?.filter((c) => c.category === categoryFilter);
+  const filtered = (content || []).filter((c) => {
+    const matchesCategory = categoryFilter === "all" || c.category === categoryFilter;
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q || c.title.toLowerCase().includes(q) || (c.body || "").toLowerCase().includes(q);
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <div className="min-h-screen bg-background">
