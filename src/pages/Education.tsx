@@ -257,6 +257,38 @@ export default function Education() {
               <SocialShareButtons title={selectedArticle.title} slug={selectedArticle.slug} />
             </div>
           )}
+
+          {/* Related Articles */}
+          {selectedArticle && (() => {
+            const related = (content || [])
+              .filter((c) => c.category === selectedArticle.category && c.id !== selectedArticle.id)
+              .slice(0, 3);
+            if (!related.length) return null;
+            return (
+              <div className="border-t pt-4">
+                <h4 className="mb-3 font-display text-sm font-semibold text-foreground">Related Articles</h4>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {related.map((r) => (
+                    <Card
+                      key={r.id}
+                      className="cursor-pointer overflow-hidden transition-shadow hover:shadow-md"
+                      onClick={() => setSelectedArticle(r)}
+                    >
+                      {r.image_url && (
+                        <img src={r.image_url} alt={r.title} className="aspect-video w-full object-cover" />
+                      )}
+                      <CardContent className="p-3">
+                        <p className="line-clamp-2 text-sm font-medium text-foreground">{r.title}</p>
+                        <span className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" /> {getReadingTime(r.body)} min
+                        </span>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
