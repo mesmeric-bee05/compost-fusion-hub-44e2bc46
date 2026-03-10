@@ -126,35 +126,76 @@ export default function Education() {
             <p className="mt-4 text-muted-foreground">Content coming soon!</p>
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((c) => (
-              <Card
-                key={c.id}
-                className="cursor-pointer overflow-hidden transition-shadow hover:shadow-lg"
-                onClick={() => setSelectedArticle(c)}
-              >
-                {c.image_url && (
-                  <img src={c.image_url} alt={c.title} className="aspect-video w-full object-cover" />
-                )}
-                <CardContent className="p-4">
-                  <div className="mb-2 flex items-center gap-2">
-                    <Badge variant="secondary" className="capitalize">{c.category}</Badge>
-                    <Badge variant="outline" className="capitalize">
-                      {c.content_type === "video" ? (
-                        <><Video className="mr-1 h-3 w-3" /> Video</>
-                      ) : (
-                        <><FileText className="mr-1 h-3 w-3" /> {c.content_type}</>
-                      )}
-                    </Badge>
-                  </div>
-                  <h3 className="font-display text-lg font-semibold text-foreground">{c.title}</h3>
-                  <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">
-                    {c.body?.replace(/[#*_\[\]`>]/g, "").slice(0, 150)}...
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {paginated.map((c) => (
+                <Card
+                  key={c.id}
+                  className="cursor-pointer overflow-hidden transition-shadow hover:shadow-lg"
+                  onClick={() => setSelectedArticle(c)}
+                >
+                  {c.image_url && (
+                    <img src={c.image_url} alt={c.title} className="aspect-video w-full object-cover" />
+                  )}
+                  <CardContent className="p-4">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Badge variant="secondary" className="capitalize">{c.category}</Badge>
+                      <Badge variant="outline" className="capitalize">
+                        {c.content_type === "video" ? (
+                          <><Video className="mr-1 h-3 w-3" /> Video</>
+                        ) : (
+                          <><FileText className="mr-1 h-3 w-3" /> {c.content_type}</>
+                        )}
+                      </Badge>
+                    </div>
+                    <h3 className="font-display text-lg font-semibold text-foreground">{c.title}</h3>
+                    <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">
+                      {c.body?.replace(/[#*_\[\]`>]/g, "").slice(0, 150)}...
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" /> Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? "default" : "outline"}
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                >
+                  Next <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Showing {paginated.length} of {filtered.length} articles
+            </p>
+          </>
         )}
       </main>
 
