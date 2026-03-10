@@ -62,6 +62,19 @@ export default function Education() {
           </p>
         </div>
 
+        {/* Search bar */}
+        <div className="mb-6 flex justify-center">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search articles..."
+              className="pl-9"
+            />
+          </div>
+        </div>
+
         {/* Category filter */}
         {categories.length > 0 && (
           <div className="mb-6 flex justify-center">

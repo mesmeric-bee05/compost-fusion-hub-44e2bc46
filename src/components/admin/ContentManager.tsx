@@ -306,15 +306,13 @@ export default function ContentManager() {
                 placeholder="Write your article content using Markdown..."
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Image URL (optional)</Label>
-                <Input value={form.image_url} onChange={(e) => updateField("image_url", e.target.value)} placeholder="https://..." />
-              </div>
-              <div>
-                <Label>Video URL (optional)</Label>
-                <Input value={form.video_url} onChange={(e) => updateField("video_url", e.target.value)} placeholder="https://youtube.com/..." />
-              </div>
+            <div>
+              <Label>Cover Image</Label>
+              <ImageUpload value={form.image_url} onChange={(url) => updateField("image_url", url)} />
+            </div>
+            <div>
+              <Label>Video URL (optional)</Label>
+              <Input value={form.video_url} onChange={(e) => updateField("video_url", e.target.value)} placeholder="https://youtube.com/..." />
             </div>
             <div className="flex items-center gap-3">
               <Switch checked={form.is_published} onCheckedChange={(v) => updateField("is_published", v)} />
