@@ -235,6 +235,12 @@ export default function Education() {
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedArticle.body}</ReactMarkdown>
             </div>
           )}
+
+          {selectedArticle && (
+            <div className="border-t pt-4">
+              <SocialShareButtons title={selectedArticle.title} slug={selectedArticle.slug} />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
