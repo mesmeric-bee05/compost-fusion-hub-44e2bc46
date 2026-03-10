@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BookOpen, Loader2, ArrowLeft, Video, FileText } from "lucide-react";
+import { BookOpen, Loader2, ArrowLeft, Video, FileText, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -27,6 +28,7 @@ interface ContentItem {
 export default function Education() {
   const [selectedArticle, setSelectedArticle] = useState<ContentItem | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: content, isLoading } = useQuery({
     queryKey: ["content"],
@@ -42,7 +44,12 @@ export default function Education() {
   });
 
   const categories = [...new Set((content || []).map((c) => c.category))];
-  const filtered = categoryFilter === "all" ? content : content?.filter((c) => c.category === categoryFilter);
+  const filtered = (content || []).filter((c) => {
+    const matchesCategory = categoryFilter === "all" || c.category === categoryFilter;
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q || c.title.toLowerCase().includes(q) || (c.body || "").toLowerCase().includes(q);
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -53,6 +60,19 @@ export default function Education() {
           <p className="mt-2 text-muted-foreground">
             Learn about composting, recycling, and sustainable agriculture
           </p>
+        </div>
+
+        {/* Search bar */}
+        <div className="mb-6 flex justify-center">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search articles..."
+              className="pl-9"
+            />
+          </div>
         </div>
 
         {/* Category filter */}
