@@ -97,7 +97,7 @@ export default function Education() {
               <Button
                 variant={categoryFilter === "all" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setCategoryFilter("all")}
+                onClick={() => handleCategoryChange("all")}
               >
                 All
               </Button>
