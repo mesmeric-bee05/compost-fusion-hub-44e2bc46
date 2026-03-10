@@ -7,11 +7,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BookOpen, Loader2, ArrowLeft, Video, FileText, Search } from "lucide-react";
+import { BookOpen, Loader2, Video, FileText, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import SocialShareButtons from "@/components/education/SocialShareButtons";
 
 interface ContentItem {
   id: string;
@@ -29,6 +29,8 @@ export default function Education() {
   const [selectedArticle, setSelectedArticle] = useState<ContentItem | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 9;
 
   const { data: content, isLoading } = useQuery({
     queryKey: ["content"],
@@ -51,6 +53,19 @@ export default function Education() {
     return matchesCategory && matchesSearch;
   });
 
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  // Reset page when filters change
+  const handleCategoryChange = (cat: string) => {
+    setCategoryFilter(cat);
+    setCurrentPage(1);
+  };
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setCurrentPage(1);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -68,7 +83,7 @@ export default function Education() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search articles..."
               className="pl-9"
             />
@@ -82,7 +97,7 @@ export default function Education() {
               <Button
                 variant={categoryFilter === "all" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setCategoryFilter("all")}
+                onClick={() => handleCategoryChange("all")}
               >
                 All
               </Button>
@@ -92,7 +107,7 @@ export default function Education() {
                   variant={categoryFilter === cat ? "default" : "outline"}
                   size="sm"
                   className="capitalize"
-                  onClick={() => setCategoryFilter(cat)}
+                  onClick={() => handleCategoryChange(cat)}
                 >
                   {cat}
                 </Button>
@@ -111,35 +126,76 @@ export default function Education() {
             <p className="mt-4 text-muted-foreground">Content coming soon!</p>
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((c) => (
-              <Card
-                key={c.id}
-                className="cursor-pointer overflow-hidden transition-shadow hover:shadow-lg"
-                onClick={() => setSelectedArticle(c)}
-              >
-                {c.image_url && (
-                  <img src={c.image_url} alt={c.title} className="aspect-video w-full object-cover" />
-                )}
-                <CardContent className="p-4">
-                  <div className="mb-2 flex items-center gap-2">
-                    <Badge variant="secondary" className="capitalize">{c.category}</Badge>
-                    <Badge variant="outline" className="capitalize">
-                      {c.content_type === "video" ? (
-                        <><Video className="mr-1 h-3 w-3" /> Video</>
-                      ) : (
-                        <><FileText className="mr-1 h-3 w-3" /> {c.content_type}</>
-                      )}
-                    </Badge>
-                  </div>
-                  <h3 className="font-display text-lg font-semibold text-foreground">{c.title}</h3>
-                  <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">
-                    {c.body?.replace(/[#*_\[\]`>]/g, "").slice(0, 150)}...
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {paginated.map((c) => (
+                <Card
+                  key={c.id}
+                  className="cursor-pointer overflow-hidden transition-shadow hover:shadow-lg"
+                  onClick={() => setSelectedArticle(c)}
+                >
+                  {c.image_url && (
+                    <img src={c.image_url} alt={c.title} className="aspect-video w-full object-cover" />
+                  )}
+                  <CardContent className="p-4">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Badge variant="secondary" className="capitalize">{c.category}</Badge>
+                      <Badge variant="outline" className="capitalize">
+                        {c.content_type === "video" ? (
+                          <><Video className="mr-1 h-3 w-3" /> Video</>
+                        ) : (
+                          <><FileText className="mr-1 h-3 w-3" /> {c.content_type}</>
+                        )}
+                      </Badge>
+                    </div>
+                    <h3 className="font-display text-lg font-semibold text-foreground">{c.title}</h3>
+                    <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">
+                      {c.body?.replace(/[#*_\[\]`>]/g, "").slice(0, 150)}...
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" /> Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? "default" : "outline"}
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                >
+                  Next <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Showing {paginated.length} of {filtered.length} articles
+            </p>
+          </>
         )}
       </main>
 
@@ -177,6 +233,12 @@ export default function Education() {
           {selectedArticle?.body && (
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedArticle.body}</ReactMarkdown>
+            </div>
+          )}
+
+          {selectedArticle && (
+            <div className="border-t pt-4">
+              <SocialShareButtons title={selectedArticle.title} slug={selectedArticle.slug} />
             </div>
           )}
         </DialogContent>
