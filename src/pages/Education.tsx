@@ -53,6 +53,19 @@ export default function Education() {
     return matchesCategory && matchesSearch;
   });
 
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  // Reset page when filters change
+  const handleCategoryChange = (cat: string) => {
+    setCategoryFilter(cat);
+    setCurrentPage(1);
+  };
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setCurrentPage(1);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
