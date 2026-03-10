@@ -29,6 +29,8 @@ export default function Education() {
   const [selectedArticle, setSelectedArticle] = useState<ContentItem | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 9;
 
   const { data: content, isLoading } = useQuery({
     queryKey: ["content"],
