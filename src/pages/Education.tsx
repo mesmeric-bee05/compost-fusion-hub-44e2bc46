@@ -155,6 +155,10 @@ export default function Education() {
                       </Badge>
                     </div>
                     <h3 className="font-display text-lg font-semibold text-foreground">{c.title}</h3>
+                    <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      <span>{getReadingTime(c.body)} min read</span>
+                    </div>
                     <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">
                       {c.body?.replace(/[#*_\[\]`>]/g, "").slice(0, 150)}...
                     </p>
