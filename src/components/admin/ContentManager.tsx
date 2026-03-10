@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Eye, EyeOff, Loader2, FileText, Video, BookOpen } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import ImageUpload from "@/components/admin/ImageUpload";
 
 const categories = ["composting", "recycling", "agriculture", "sustainability", "tips"] as const;
 const contentTypes = [
