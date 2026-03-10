@@ -107,7 +107,7 @@ export default function Education() {
                   variant={categoryFilter === cat ? "default" : "outline"}
                   size="sm"
                   className="capitalize"
-                  onClick={() => setCategoryFilter(cat)}
+                  onClick={() => handleCategoryChange(cat)}
                 >
                   {cat}
                 </Button>
