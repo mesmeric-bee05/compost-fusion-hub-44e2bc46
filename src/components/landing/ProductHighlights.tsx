@@ -70,8 +70,8 @@ const ProductHighlights = () => {
                       <span className="font-display font-bold text-primary">{product.currency} {Number(product.price).toLocaleString()}</span>
                     </div>
                   </CardContent>
-                </Link>
-              </Card>
+                </Card>
+              </Link>
             </motion.div>
           ))}
         </div>
