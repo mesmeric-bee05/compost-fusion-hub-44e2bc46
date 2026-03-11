@@ -46,8 +46,8 @@ const ProductHighlights = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
             >
-              <Card className="group h-full overflow-hidden border-border/50 transition-all hover:shadow-lg" asChild>
-                <Link to={`/products/${product.slug}`}>
+              <Link to={`/products/${product.slug}`}>
+              <Card className="group h-full overflow-hidden border-border/50 transition-all hover:shadow-lg">
                   <div className="aspect-[4/3] bg-gradient-to-br from-accent to-muted flex items-center justify-center overflow-hidden">
                     {product.image_url ? (
                       <img src={product.image_url} alt={product.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
