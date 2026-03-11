@@ -69,6 +69,7 @@ const Navbar = () => {
                 {role === "admin" && <DropdownMenuItem asChild><Link to="/admin" className="flex items-center gap-2"><Shield className="h-4 w-4" />Admin</Link></DropdownMenuItem>}
                 {role === "driver" && <DropdownMenuItem asChild><Link to="/driver" className="flex items-center gap-2"><Truck className="h-4 w-4" />My Tasks</Link></DropdownMenuItem>}
                 <DropdownMenuItem asChild><Link to="/profile" className="flex items-center gap-2"><Settings className="h-4 w-4" />Profile</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link to="/bookmarks" className="flex items-center gap-2"><Bookmark className="h-4 w-4" />Saved Articles</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link to="/notification-preferences" className="flex items-center gap-2"><BellRing className="h-4 w-4" />Notifications</Link></DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut} className="flex items-center gap-2"><LogOut className="h-4 w-4" />Sign Out</DropdownMenuItem>

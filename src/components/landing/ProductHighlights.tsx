@@ -1,42 +1,27 @@
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Leaf } from "lucide-react";
 import { motion } from "framer-motion";
 
-const products = [
-  {
-    name: "Aerobin 200L",
-    category: "Composter",
-    price: "KES 45,000",
-    description: "Compact insulated composter for households. Odour-free, pest-free composting.",
-    badge: "Best Seller",
-  },
-  {
-    name: "Aerobin 400L",
-    category: "Composter",
-    price: "KES 75,000",
-    description: "Mid-size composter for small farms and estates. Dual-chamber design.",
-    badge: "Popular",
-  },
-  {
-    name: "Aerobin 600L",
-    category: "Composter",
-    price: "KES 110,000",
-    description: "Large-scale composter for institutions and commercial operations.",
-    badge: "Enterprise",
-  },
-  {
-    name: "Premium Compost",
-    category: "Compost",
-    price: "KES 500/bag",
-    description: "Nutrient-rich, lab-tested organic compost for farming and gardening.",
-    badge: "New",
-  },
-];
-
 const ProductHighlights = () => {
+  const { data: products = [] } = useQuery({
+    queryKey: ["featured-products"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: true })
+        .limit(4);
+      if (error) throw error;
+      return data;
+    },
+  });
+
   return (
     <section className="bg-muted/50 py-20">
       <div className="container">
@@ -55,30 +40,37 @@ const ProductHighlights = () => {
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {products.map((product, i) => (
             <motion.div
-              key={product.name}
+              key={product.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
             >
-              <Card className="group h-full overflow-hidden border-border/50 transition-all hover:shadow-lg">
-                <div className="aspect-[4/3] bg-gradient-to-br from-accent to-muted flex items-center justify-center">
-                  <div className="text-4xl font-display font-bold text-primary/20">
-                    {product.category === "Composter" ? "🏗️" : "🌱"}
+              <Card className="group h-full overflow-hidden border-border/50 transition-all hover:shadow-lg" asChild>
+                <Link to={`/products/${product.slug}`}>
+                  <div className="aspect-[4/3] bg-gradient-to-br from-accent to-muted flex items-center justify-center overflow-hidden">
+                    {product.image_url ? (
+                      <img src={product.image_url} alt={product.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                    ) : (
+                      <Leaf className="h-12 w-12 text-primary/20" />
+                    )}
                   </div>
-                </div>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="secondary" className="text-xs">{product.badge}</Badge>
-                    <span className="text-xs text-muted-foreground">{product.category}</span>
-                  </div>
-                  <h3 className="mt-2 font-display font-semibold text-foreground">{product.name}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{product.description}</p>
-                  <div className="mt-3 flex items-center justify-between">
-                    <span className="font-display font-bold text-primary">{product.price}</span>
-                    <Button size="sm" variant="outline" className="text-xs">Add to Cart</Button>
-                  </div>
-                </CardContent>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="secondary" className="text-xs capitalize">{product.category}</Badge>
+                      {product.stock_quantity > 0 ? (
+                        <span className="text-xs text-muted-foreground">In Stock</span>
+                      ) : (
+                        <span className="text-xs text-destructive">Out of Stock</span>
+                      )}
+                    </div>
+                    <h3 className="mt-2 font-display font-semibold text-foreground">{product.name}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{product.short_description || product.description}</p>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="font-display font-bold text-primary">{product.currency} {Number(product.price).toLocaleString()}</span>
+                    </div>
+                  </CardContent>
+                </Link>
               </Card>
             </motion.div>
           ))}
