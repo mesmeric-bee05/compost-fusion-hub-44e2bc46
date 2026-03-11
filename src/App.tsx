@@ -24,6 +24,7 @@ import Compare from "./pages/Compare";
 import NotificationPreferences from "./pages/NotificationPreferences";
 import Onboarding from "./pages/Onboarding";
 import Leaderboard from "./pages/Leaderboard";
+import Bookmarks from "./pages/Bookmarks";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
