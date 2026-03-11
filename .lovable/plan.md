@@ -1,127 +1,128 @@
 
 
-# Comprehensive Project Enhancement Plan
+# Full Platform Build: End-to-End Fixes, Product Images, Admin Dashboard, Driver Dashboard
 
-## Overview
-This plan covers three major feature additions plus a full-project quality pass: article comments, article bookmarks, and holistic improvements identified from the screenshots and codebase review.
+This plan addresses all four requests in sequence, building each feature in full depth.
 
-## 1. Article Comments System
+---
 
-**Database:**
-- New `article_comments` table: `id`, `content_id` (FK to content), `user_id`, `body` (text), `created_at`
-- RLS: authenticated users can INSERT (own), SELECT (all published article comments), UPDATE/DELETE (own). Admins can manage all.
+## Part 1: End-to-End Fixes
 
-**Frontend:**
-- New `src/components/education/ArticleComments.tsx` component
-- Displays threaded comments with user name (from profiles), timestamps
-- Comment form (textarea + submit) for logged-in users, "Sign in to comment" prompt for guests
-- Integrated at bottom of article dialog in `Education.tsx`
+Several issues were identified during testing:
 
-## 2. Article Bookmarks (Save for Later)
+### 1A. Missing `auth.users` trigger
+The `handle_new_user()` function exists but the trigger connecting it to `auth.users` may not be properly attached. A migration will ensure the trigger is created (using `CREATE OR REPLACE` / `IF NOT EXISTS` pattern) so that every signup automatically creates entries in `profiles`, `user_roles`, and `rewards`.
 
-**Database:**
-- New `article_bookmarks` table: `id`, `content_id` (FK to content), `user_id`, `created_at`, unique constraint on (user_id, content_id)
-- RLS: authenticated users can INSERT/DELETE/SELECT own bookmarks
+### 1B. Product images missing
+All 10 products currently have `NULL` for `image_url`. Products display placeholder leaf icons instead of real images. This will be fixed in Part 2.
 
-**Frontend:**
-- New `src/hooks/useBookmarks.ts` hook (similar pattern to `useWishlist`)
-- Bookmark toggle button (bookmark icon) on article cards and inside article dialog
-- New `/bookmarks` route with `src/pages/Bookmarks.tsx` showing saved articles
-- Add Bookmarks link to user dropdown menu in Navbar
+### 1C. RLS policy verification
+All collection_requests policies are confirmed PERMISSIVE (not RESTRICTIVE), so users can create/view their own collections correctly. No changes needed.
 
-## 3. Full-Project Quality & Feature Pass
+---
 
-Based on the screenshots and codebase review:
+## Part 2: Product Images via AI Generation
 
-**Product Images (from Screenshot 1):**
-- The ProductHighlights on landing page uses emoji placeholders instead of actual product images from the database. Update `ProductHighlights.tsx` to fetch real products from the database and display actual images, matching the screenshot layout.
+Generate product images using the Lovable AI image generation API (google/gemini-2.5-flash-image), then store them in a Supabase storage bucket and update product records.
 
-**Security Hardening:**
-- Add `DialogDescription` to all Dialog components missing it (accessibility warning fix)
-- Ensure `profiles` table has INSERT policy for new user creation via trigger (currently missing INSERT policy -- likely handled by a trigger, but verify)
+**Implementation:**
+1. Create a `product-images` storage bucket (public, for product catalog images)
+2. Create an edge function `generate-product-images` that:
+   - For each product category (composters, equipment, compost, accessories), generates a professional product photo using the AI image API
+   - Converts the base64 result to a file and uploads to the storage bucket
+   - Updates the product's `image_url` in the database
+3. Call the edge function once to populate all product images
+4. Update `ProductCard` and `ProductDetail` components to properly display storage URLs
 
-**Minor UI Polish:**
-- Add Bookmarks icon to navbar (next to wishlist heart)
-- Education page: ensure empty state matches screenshot (already looks correct)
-- Community page: matches screenshot (already correct)
+**Products and their image prompts:**
+- Aerobin 200L/400L/600L: "Professional product photo of a green insulated aerobic composter bin, [size] liters, on white background"
+- RVM Standard/Pro: "Professional product photo of a modern reverse vending machine for recycling, digital display, on white background"
+- Compost 25kg/50kg: "Professional product photo of a bag of premium organic compost, [weight], on white background"
+- Vermicompost: "Professional product photo of a bag of vermicompost worm castings, 10kg, on white background"
+- Starter Kit: "Professional product photo of a composting starter kit with thermometer and guidebook, on white background"
+- Bio-Enzyme: "Professional product photo of a bottle of bio-enzyme composting activator, 1 liter, on white background"
 
-## Database Migration (single SQL migration)
+---
 
-```sql
--- Article comments
-CREATE TABLE public.article_comments (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  content_id uuid NOT NULL REFERENCES public.content(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL,
-  body text NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+## Part 3: Admin Dashboard
 
-ALTER TABLE public.article_comments ENABLE ROW LEVEL SECURITY;
+A comprehensive admin dashboard accessible only to users with the `admin` role.
 
-CREATE POLICY "Anyone can view comments on published content"
-  ON public.article_comments FOR SELECT TO public
-  USING (EXISTS (
-    SELECT 1 FROM public.content WHERE content.id = article_comments.content_id AND content.is_published = true
-  ));
+**New files:**
+- `src/pages/AdminDashboard.tsx` -- Main admin page with sidebar layout
+- `src/components/admin/AdminStats.tsx` -- Summary cards (total users, orders, collections, revenue)
+- `src/components/admin/RevenueChart.tsx` -- Revenue over time using Recharts (AreaChart)
+- `src/components/admin/OrdersTable.tsx` -- Recent orders table with status management
+- `src/components/admin/CollectionsTable.tsx` -- All collection requests with driver assignment
+- `src/components/admin/UsersTable.tsx` -- User management table
 
-CREATE POLICY "Authenticated users can create comments"
-  ON public.article_comments FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = user_id);
+**Database requirements:**
+- Admin role check uses existing `has_role()` function
+- Admin RLS policies already exist on all tables (ALL command for admin role)
+- No schema changes needed -- admin reads are already permitted by existing policies
 
-CREATE POLICY "Users can update own comments"
-  ON public.article_comments FOR UPDATE TO authenticated
-  USING (auth.uid() = user_id);
+**Admin stats will query:**
+- Total profiles count
+- Total orders count and sum of `total_amount`
+- Total collection requests count, broken down by status
+- Orders grouped by month for the revenue chart
 
-CREATE POLICY "Users can delete own comments"
-  ON public.article_comments FOR DELETE TO authenticated
-  USING (auth.uid() = user_id);
+**Route:** `/admin` -- protected by `ProtectedRoute` + additional admin role check
 
-CREATE POLICY "Admins can manage all comments"
-  ON public.article_comments FOR ALL TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+**UI Layout:**
+- Sidebar with navigation: Overview, Orders, Collections, Users
+- Top-level summary cards with icons and KES formatting
+- Revenue chart (last 6 months) using Recharts AreaChart
+- Tables with status badges, sortable columns, and action buttons
 
--- Article bookmarks
-CREATE TABLE public.article_bookmarks (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  content_id uuid NOT NULL REFERENCES public.content(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (user_id, content_id)
-);
+---
 
-ALTER TABLE public.article_bookmarks ENABLE ROW LEVEL SECURITY;
+## Part 4: Driver Dashboard
 
-CREATE POLICY "Users can view own bookmarks"
-  ON public.article_bookmarks FOR SELECT TO authenticated
-  USING (auth.uid() = user_id);
+A dedicated view for users with the `driver` role to manage assigned collection tasks.
 
-CREATE POLICY "Users can create bookmarks"
-  ON public.article_bookmarks FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = user_id);
+**New files:**
+- `src/pages/DriverDashboard.tsx` -- Driver's main page
+- `src/components/driver/AssignedCollections.tsx` -- List of assigned collection tasks with action buttons
+- `src/components/driver/CollectionDetailCard.tsx` -- Expanded view of a single collection with mark-as-collected button
 
-CREATE POLICY "Users can delete bookmarks"
-  ON public.article_bookmarks FOR DELETE TO authenticated
-  USING (auth.uid() = user_id);
-```
+**Features:**
+- Shows only collections where `driver_id = auth.uid()`
+- Status workflow: Scheduled -> mark as "collected" with one click
+- Card-based layout showing: waste type, address, date/time, volume, user notes
+- Status badge with color coding
+- Confirmation dialog before marking as collected
+- Auto-refresh after status update
 
-## Files to Create
-1. `src/components/education/ArticleComments.tsx` - Comments UI with list + form
-2. `src/hooks/useBookmarks.ts` - Bookmark toggle hook
-3. `src/pages/Bookmarks.tsx` - Saved articles page
+**Database requirements:**
+- Existing RLS policies already allow drivers to SELECT and UPDATE their assigned collections
+- Driver updates `status` to `collected` and optionally adds `verification_photo_url`
 
-## Files to Edit
-1. `src/pages/Education.tsx` - Add bookmark toggle + comments component to article dialog
-2. `src/components/landing/Navbar.tsx` - Add Bookmarks icon link
-3. `src/App.tsx` - Add `/bookmarks` route
-4. `src/components/landing/ProductHighlights.tsx` - Fetch real products from DB instead of hardcoded data
+**Route:** `/driver` -- protected by `ProtectedRoute` + driver role check
 
-## Implementation Order
-1. Run database migration (comments + bookmarks tables)
-2. Create `useBookmarks` hook
-3. Create `ArticleComments` component
-4. Create `Bookmarks` page
-5. Update `Education.tsx` with bookmarks + comments
-6. Update `Navbar`, `App.tsx` with bookmarks route
-7. Update `ProductHighlights` to use real DB products
+---
+
+## Part 5: App.tsx Route Updates
+
+Add new routes to `App.tsx`:
+- `/admin` -- AdminDashboard (protected, admin-only)
+- `/driver` -- DriverDashboard (protected, driver-only)
+
+Update Navbar to show role-specific links:
+- Admin users see "Admin" link in the user dropdown
+- Driver users see "My Tasks" link in the user dropdown
+
+---
+
+## Technical Summary
+
+| Change | Type | Files |
+|--------|------|-------|
+| Trigger fix | DB Migration | 1 migration |
+| Storage bucket | DB Migration | 1 migration |
+| Image generation | Edge Function | `supabase/functions/generate-product-images/index.ts` |
+| Admin dashboard | Frontend | 5 new components + 1 page |
+| Driver dashboard | Frontend | 3 new components + 1 page |
+| Route updates | Frontend | `App.tsx`, `Navbar.tsx` |
+| Role-based guards | Frontend | New `AdminRoute.tsx`, `DriverRoute.tsx` components |
 

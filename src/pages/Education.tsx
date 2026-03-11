@@ -1,17 +1,20 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useBookmarks } from "@/hooks/useBookmarks";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BookOpen, Loader2, Video, FileText, Search, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { BookOpen, Loader2, Video, FileText, Search, ChevronLeft, ChevronRight, Clock, Bookmark } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import SocialShareButtons from "@/components/education/SocialShareButtons";
+import ArticleComments from "@/components/education/ArticleComments";
 
 function getReadingTime(text: string | null): number {
   if (!text) return 1;
@@ -32,6 +35,8 @@ interface ContentItem {
 }
 
 export default function Education() {
+  const { user } = useAuth();
+  const { isBookmarked, toggleBookmark } = useBookmarks();
   const [selectedArticle, setSelectedArticle] = useState<ContentItem | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,7 +67,6 @@ export default function Education() {
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  // Reset page when filters change
   const handleCategoryChange = (cat: string) => {
     setCategoryFilter(cat);
     setCurrentPage(1);
@@ -83,7 +87,6 @@ export default function Education() {
           </p>
         </div>
 
-        {/* Search bar */}
         <div className="mb-6 flex justify-center">
           <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -96,27 +99,12 @@ export default function Education() {
           </div>
         </div>
 
-        {/* Category filter */}
         {categories.length > 0 && (
           <div className="mb-6 flex justify-center">
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant={categoryFilter === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleCategoryChange("all")}
-              >
-                All
-              </Button>
+              <Button variant={categoryFilter === "all" ? "default" : "outline"} size="sm" onClick={() => handleCategoryChange("all")}>All</Button>
               {categories.map((cat) => (
-                <Button
-                  key={cat}
-                  variant={categoryFilter === cat ? "default" : "outline"}
-                  size="sm"
-                  className="capitalize"
-                  onClick={() => handleCategoryChange(cat)}
-                >
-                  {cat}
-                </Button>
+                <Button key={cat} variant={categoryFilter === cat ? "default" : "outline"} size="sm" className="capitalize" onClick={() => handleCategoryChange(cat)}>{cat}</Button>
               ))}
             </div>
           </div>
@@ -135,24 +123,28 @@ export default function Education() {
           <>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {paginated.map((c) => (
-                <Card
-                  key={c.id}
-                  className="cursor-pointer overflow-hidden transition-shadow hover:shadow-lg"
-                  onClick={() => setSelectedArticle(c)}
-                >
+                <Card key={c.id} className="cursor-pointer overflow-hidden transition-shadow hover:shadow-lg" onClick={() => setSelectedArticle(c)}>
                   {c.image_url && (
                     <img src={c.image_url} alt={c.title} className="aspect-video w-full object-cover" />
                   )}
                   <CardContent className="p-4">
-                    <div className="mb-2 flex items-center gap-2">
-                      <Badge variant="secondary" className="capitalize">{c.category}</Badge>
-                      <Badge variant="outline" className="capitalize">
-                        {c.content_type === "video" ? (
-                          <><Video className="mr-1 h-3 w-3" /> Video</>
-                        ) : (
-                          <><FileText className="mr-1 h-3 w-3" /> {c.content_type}</>
-                        )}
-                      </Badge>
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="capitalize">{c.category}</Badge>
+                        <Badge variant="outline" className="capitalize">
+                          {c.content_type === "video" ? <><Video className="mr-1 h-3 w-3" /> Video</> : <><FileText className="mr-1 h-3 w-3" /> {c.content_type}</>}
+                        </Badge>
+                      </div>
+                      {user && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => { e.stopPropagation(); toggleBookmark.mutate(c.id); }}
+                        >
+                          <Bookmark className={`h-4 w-4 ${isBookmarked(c.id) ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+                        </Button>
+                      )}
                     </div>
                     <h3 className="font-display text-lg font-semibold text-foreground">{c.title}</h3>
                     <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
@@ -167,36 +159,17 @@ export default function Education() {
               ))}
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="mt-8 flex items-center justify-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => p - 1)}
-                >
+                <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>
                   <ChevronLeft className="mr-1 h-4 w-4" /> Previous
                 </Button>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <Button
-                      key={page}
-                      variant={page === currentPage ? "default" : "outline"}
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </Button>
+                    <Button key={page} variant={page === currentPage ? "default" : "outline"} size="sm" className="h-8 w-8 p-0" onClick={() => setCurrentPage(page)}>{page}</Button>
                   ))}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((p) => p + 1)}
-                >
+                <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}>
                   Next <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               </div>
@@ -209,15 +182,22 @@ export default function Education() {
         )}
       </main>
 
-      {/* Article Reader Dialog */}
       <Dialog open={!!selectedArticle} onOpenChange={(open) => !open && setSelectedArticle(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="capitalize">{selectedArticle?.category}</Badge>
-              <Badge variant="outline" className="capitalize">{selectedArticle?.content_type}</Badge>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="capitalize">{selectedArticle?.category}</Badge>
+                <Badge variant="outline" className="capitalize">{selectedArticle?.content_type}</Badge>
+              </div>
+              {user && selectedArticle && (
+                <Button variant="ghost" size="icon" onClick={() => toggleBookmark.mutate(selectedArticle.id)}>
+                  <Bookmark className={`h-5 w-5 ${isBookmarked(selectedArticle.id) ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+                </Button>
+              )}
             </div>
             <DialogTitle className="font-display text-2xl">{selectedArticle?.title}</DialogTitle>
+            <DialogDescription className="sr-only">Article details and content</DialogDescription>
             {selectedArticle?.body && (
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
@@ -227,22 +207,12 @@ export default function Education() {
           </DialogHeader>
 
           {selectedArticle?.image_url && (
-            <img
-              src={selectedArticle.image_url}
-              alt={selectedArticle.title}
-              className="w-full rounded-lg object-cover"
-              style={{ maxHeight: "300px" }}
-            />
+            <img src={selectedArticle.image_url} alt={selectedArticle.title} className="w-full rounded-lg object-cover" style={{ maxHeight: "300px" }} />
           )}
 
           {selectedArticle?.video_url && (
             <div className="aspect-video w-full overflow-hidden rounded-lg">
-              <iframe
-                src={selectedArticle.video_url.replace("watch?v=", "embed/")}
-                className="h-full w-full"
-                allowFullScreen
-                title={selectedArticle.title}
-              />
+              <iframe src={selectedArticle.video_url.replace("watch?v=", "embed/")} className="h-full w-full" allowFullScreen title={selectedArticle.title} />
             </div>
           )}
 
@@ -269,14 +239,8 @@ export default function Education() {
                 <h4 className="mb-3 font-display text-sm font-semibold text-foreground">Related Articles</h4>
                 <div className="grid gap-3 sm:grid-cols-3">
                   {related.map((r) => (
-                    <Card
-                      key={r.id}
-                      className="cursor-pointer overflow-hidden transition-shadow hover:shadow-md"
-                      onClick={() => setSelectedArticle(r)}
-                    >
-                      {r.image_url && (
-                        <img src={r.image_url} alt={r.title} className="aspect-video w-full object-cover" />
-                      )}
+                    <Card key={r.id} className="cursor-pointer overflow-hidden transition-shadow hover:shadow-md" onClick={() => setSelectedArticle(r)}>
+                      {r.image_url && <img src={r.image_url} alt={r.title} className="aspect-video w-full object-cover" />}
                       <CardContent className="p-3">
                         <p className="line-clamp-2 text-sm font-medium text-foreground">{r.title}</p>
                         <span className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
@@ -289,6 +253,9 @@ export default function Education() {
               </div>
             );
           })()}
+
+          {/* Comments */}
+          {selectedArticle && <ArticleComments contentId={selectedArticle.id} />}
         </DialogContent>
       </Dialog>
 
