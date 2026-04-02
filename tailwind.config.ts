@@ -66,6 +66,8 @@ export default {
           leaf: "hsl(var(--eco-leaf))",
           sky: "hsl(var(--eco-sky))",
           compost: "hsl(var(--eco-compost))",
+          cream: "hsl(var(--eco-cream))",
+          deep: "hsl(var(--eco-deep))",
         },
       },
       borderRadius: {
