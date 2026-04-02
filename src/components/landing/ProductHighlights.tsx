@@ -42,8 +42,7 @@ const ProductHighlights = () => {
             <motion.div
               key={product.id}
               initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
             >
               <Link to={`/products/${product.slug}`}>
