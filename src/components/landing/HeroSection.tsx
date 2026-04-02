@@ -1,12 +1,11 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Recycle, TrendingUp, Leaf } from "lucide-react";
+import { ArrowRight, Recycle, TrendingUp, Leaf, Hash } from "lucide-react";
 import { motion } from "framer-motion";
 
 const HeroSection = () => {
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-accent via-background to-background py-20 lg:py-32">
-      {/* Background decoration */}
       <div className="absolute -right-40 -top-40 h-[500px] w-[500px] rounded-full bg-primary/5 blur-3xl" />
       <div className="absolute -bottom-20 -left-20 h-[300px] w-[300px] rounded-full bg-secondary/10 blur-3xl" />
 
@@ -18,9 +17,15 @@ const HeroSection = () => {
             transition={{ duration: 0.7 }}
             className="max-w-xl"
           >
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
-              <Leaf className="h-4 w-4" />
-              Captain Compost × MyEcoLoop
+            <div className="mb-4 flex flex-wrap gap-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
+                <Leaf className="h-4 w-4" />
+                Captain Compost × MyEcoLoop
+              </div>
+              <Link to="/ussd" className="inline-flex items-center gap-2 rounded-full border border-secondary/30 bg-secondary/10 px-4 py-1.5 text-sm font-medium text-secondary-foreground hover:bg-secondary/20 transition-colors">
+                <Hash className="h-4 w-4" />
+                Dial *384*555#
+              </Link>
             </div>
 
             <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
@@ -46,9 +51,9 @@ const HeroSection = () => {
 
             <div className="mt-12 grid grid-cols-3 gap-6">
               {[
-                { icon: Recycle, value: "50K+", label: "Kg Waste Diverted" },
-                { icon: TrendingUp, value: "2,000+", label: "Active Users" },
-                { icon: Leaf, value: "30T+", label: "CO₂ Saved" },
+                { icon: Recycle, value: "2,500+", label: "Units Deployed" },
+                { icon: TrendingUp, value: "47", label: "Counties" },
+                { icon: Leaf, value: "80%", label: "Waste Reduction" },
               ].map((stat, i) => (
                 <motion.div
                   key={stat.label}

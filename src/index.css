@@ -15,11 +15,11 @@
     --popover: 0 0% 100%;
     --popover-foreground: 150 30% 10%;
 
-    --primary: 152 60% 36%;
+    --primary: 100 55% 49%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 45 80% 55%;
-    --secondary-foreground: 150 30% 10%;
+    --secondary: 30 30% 40%;
+    --secondary-foreground: 40 30% 95%;
 
     --muted: 120 10% 94%;
     --muted-foreground: 150 10% 45%;
@@ -45,10 +45,12 @@
     --sidebar-border: 120 10% 88%;
     --sidebar-ring: 152 60% 36%;
 
-    --eco-earth: 30 50% 45%;
-    --eco-leaf: 100 50% 40%;
+    --eco-earth: 24 41% 39%;
+    --eco-leaf: 100 55% 49%;
     --eco-sky: 200 60% 55%;
     --eco-compost: 25 60% 35%;
+    --eco-cream: 36 53% 93%;
+    --eco-deep: 152 55% 11%;
   }
 
   .dark {
@@ -61,11 +63,11 @@
     --popover: 150 20% 9%;
     --popover-foreground: 120 10% 95%;
 
-    --primary: 152 55% 45%;
+    --primary: 100 55% 49%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 45 70% 50%;
-    --secondary-foreground: 150 30% 10%;
+    --secondary: 30 30% 40%;
+    --secondary-foreground: 40 30% 95%;
 
     --muted: 150 15% 15%;
     --muted-foreground: 120 10% 60%;

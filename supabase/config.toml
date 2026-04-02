@@ -2,3 +2,6 @@ project_id = "keamtdezbeheryzfaqzt"
 
 [functions.mpesa-callback]
 verify_jwt = false
+
+[functions.ussd-handler]
+verify_jwt = false

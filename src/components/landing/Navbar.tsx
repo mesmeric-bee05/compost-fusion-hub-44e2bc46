@@ -12,6 +12,7 @@ const navLinks = [
   { label: "Products", href: "/products" },
   { label: "Collections", href: "/collections" },
   { label: "Education", href: "/education" },
+  { label: "USSD", href: "/ussd" },
   { label: "Leaderboard", href: "/leaderboard" },
   { label: "Community", href: "/community" },
   { label: "About", href: "/about" },

@@ -162,6 +162,42 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_submissions: {
+        Row: {
+          county: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          interest: string | null
+          is_read: boolean | null
+          message: string
+          name: string
+          phone: string | null
+        }
+        Insert: {
+          county?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          interest?: string | null
+          is_read?: boolean | null
+          message: string
+          name: string
+          phone?: string | null
+        }
+        Update: {
+          county?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          interest?: string | null
+          is_read?: boolean | null
+          message?: string
+          name?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
       content: {
         Row: {
           author_id: string | null
@@ -770,6 +806,36 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      ussd_sessions: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          menu_state: string | null
+          phone_number: string
+          session_data: Json | null
+          session_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          menu_state?: string | null
+          phone_number: string
+          session_data?: Json | null
+          session_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          menu_state?: string | null
+          phone_number?: string
+          session_data?: Json | null
+          session_id?: string
         }
         Relationships: []
       }

@@ -25,6 +25,9 @@ import NotificationPreferences from "./pages/NotificationPreferences";
 import Onboarding from "./pages/Onboarding";
 import Leaderboard from "./pages/Leaderboard";
 import Bookmarks from "./pages/Bookmarks";
+import Ussd from "./pages/Ussd";
+import Contact from "./pages/Contact";
+import Faq from "./pages/Faq";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -47,6 +50,9 @@ const App = () => (
           <Route path="/education" element={<Education />} />
           <Route path="/community" element={<Community />} />
           <Route path="/about" element={<About />} />
+          <Route path="/ussd" element={<Ussd />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/faq" element={<Faq />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
