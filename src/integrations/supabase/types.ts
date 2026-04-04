@@ -877,6 +877,13 @@ export type Database = {
         Args: { _code: string; _order_total: number }
         Returns: Json
       }
+      get_leaderboard_profiles: {
+        Args: { user_ids: string[] }
+        Returns: {
+          full_name: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
