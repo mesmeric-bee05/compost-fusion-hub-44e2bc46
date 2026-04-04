@@ -1,7 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Star } from "lucide-react";
-import { motion } from "framer-motion";
 
 const testimonials = [
   {
@@ -56,38 +55,31 @@ const TestimonialsSection = () => {
         </div>
 
         <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {testimonials.map((t, i) => (
-            <motion.div
-              key={t.name}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-            >
-              <Card className="h-full border-border/50 transition-shadow hover:shadow-lg">
-                <CardContent className="flex h-full flex-col p-6">
-                  <div className="mb-4 flex items-center gap-3">
-                    <Avatar className="h-10 w-10 bg-primary/10">
-                      <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">
-                        {t.initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{t.name}</p>
-                      <p className="text-xs text-muted-foreground">{t.role}, {t.location}</p>
-                    </div>
+          {testimonials.map((t) => (
+            <Card key={t.name} className="h-full border-border/50 transition-shadow hover:shadow-lg">
+              <CardContent className="flex h-full flex-col p-6">
+                <div className="mb-4 flex items-center gap-3">
+                  <Avatar className="h-10 w-10 bg-primary/10">
+                    <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">
+                      {t.initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{t.name}</p>
+                    <p className="text-xs text-muted-foreground">{t.role}, {t.location}</p>
                   </div>
-                  <div className="mb-3 flex gap-0.5">
-                    {Array.from({ length: 5 }).map((_, s) => (
-                      <Star
-                        key={s}
-                        className={`h-4 w-4 ${s < t.rating ? "fill-primary text-primary" : "text-muted-foreground/30"}`}
-                      />
-                    ))}
-                  </div>
-                  <p className="flex-1 text-sm leading-relaxed text-muted-foreground">"{t.quote}"</p>
-                </CardContent>
-              </Card>
-            </motion.div>
+                </div>
+                <div className="mb-3 flex gap-0.5">
+                  {Array.from({ length: 5 }).map((_, s) => (
+                    <Star
+                      key={s}
+                      className={`h-4 w-4 ${s < t.rating ? "fill-primary text-primary" : "text-muted-foreground/30"}`}
+                    />
+                  ))}
+                </div>
+                <p className="flex-1 text-sm leading-relaxed text-muted-foreground">"{t.quote}"</p>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
