@@ -60,8 +60,9 @@ const TestimonialsSection = () => {
             <motion.div
               key={t.name}
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "100px" }}
+              transition={{ duration: 0.4, delay: i * 0.08 }}
             >
               <Card className="h-full border-border/50 transition-shadow hover:shadow-lg">
                 <CardContent className="flex h-full flex-col p-6">

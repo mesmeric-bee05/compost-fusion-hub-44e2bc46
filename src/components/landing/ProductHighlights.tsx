@@ -42,8 +42,9 @@ const ProductHighlights = () => {
             <motion.div
               key={product.id}
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "100px" }}
+              transition={{ duration: 0.4, delay: i * 0.08 }}
             >
               <Link to={`/products/${product.slug}`}>
               <Card className="group h-full overflow-hidden border-border/50 transition-all hover:shadow-lg">

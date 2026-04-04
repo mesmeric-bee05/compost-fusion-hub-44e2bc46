@@ -54,8 +54,8 @@ const FeaturesSection = () => {
               key={feature.title}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0 }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
+              viewport={{ once: true, margin: "100px" }}
+              transition={{ duration: 0.4, delay: i * 0.08 }}
             >
               <Card className="group h-full border-border/50 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
                 <CardContent className="p-6">

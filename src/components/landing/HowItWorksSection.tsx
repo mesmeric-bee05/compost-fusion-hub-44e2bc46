@@ -46,8 +46,9 @@ const HowItWorksSection = () => {
               <motion.div
                 key={step.title}
                 initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: i * 0.15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "100px" }}
+                transition={{ duration: 0.4, delay: i * 0.1 }}
                 className="relative flex flex-col items-center text-center"
               >
                 {/* Number badge + icon */}
