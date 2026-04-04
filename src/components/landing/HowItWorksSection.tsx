@@ -1,5 +1,4 @@
 import { ShoppingBag, Truck, Recycle, Sprout } from "lucide-react";
-import { motion } from "framer-motion";
 
 const steps = [
   {
@@ -38,34 +37,24 @@ const HowItWorksSection = () => {
         </div>
 
         <div className="relative mt-16">
-          {/* Connector line - desktop only */}
           <div className="absolute left-0 right-0 top-12 hidden h-0.5 bg-border lg:block" />
 
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((step, i) => (
-              <motion.div
-                key={step.title}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "100px" }}
-                transition={{ duration: 0.4, delay: i * 0.1 }}
-                className="relative flex flex-col items-center text-center"
-              >
-                {/* Number badge + icon */}
+              <div key={step.title} className="relative flex flex-col items-center text-center">
                 <div className="relative z-10 mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-primary/10">
                   <step.icon className="h-10 w-10 text-primary" />
                   <span className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
                     {i + 1}
                   </span>
                 </div>
-
                 <h3 className="font-display text-lg font-semibold text-foreground">
                   {step.title}
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {step.description}
                 </p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
