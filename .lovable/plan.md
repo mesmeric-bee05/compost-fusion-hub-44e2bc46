@@ -1,47 +1,59 @@
 
+# Comprehensive Audit Implementation — Phase 1
 
-# Plan: How It Works Section, Missing Product Images & Quality Pass
+## Overview
+Implementing the most critical items from the full audit document: brand violation fixes (CRITICAL), newsletter footer signup, About page rebuild, hero/nav fixes, and key UX improvements.
 
-## 1. Fix 3 Products Still Missing Images
+## 1. CRITICAL — Remove All MyEcoLoop/Ecoloop References
 
-Database query confirms 3 products have `NULL` image_url:
-- `premium-organic-compost-5kg`
-- `premium-organic-compost-20kg`
-- `corporate-esg-audit-package`
+**Footer (`Footer.tsx`):**
+- Remove "× MyEcoLoop" from copyright line → "© 2026 Captain Compost. All rights reserved."
+- Rewrite brand description to remove "Partnered with MyEcoLoop"
+- Replace phone number `+254 700 000 000` → `+254 700 116 655`
 
-**Migration:** Update these 3 rows with curated Unsplash image URLs:
-- Compost 5kg → soil/compost close-up image
-- Compost 20kg → compost bags/garden image
-- ESG Audit → corporate/sustainability report image
+**Hero (`HeroSection.tsx`):**
+- Remove "Captain Compost × MyEcoLoop" badge → "🌱 Kenya's Composting Champion"
+- Update subheadline to more action-oriented copy
 
-## 2. Add "How It Works" Section
+**Navbar (`Navbar.tsx`):**
+- Ensure no "Powered by Ecoloop Africa" subtitle exists (verify clean)
 
-**New file: `src/components/landing/HowItWorksSection.tsx`**
+**About page (`About.tsx`):**
+- Complete rebuild: remove MyEcoLoop card, rewrite narrative, add mission/vision/values, offerings list, team section placeholder
 
-Four-step horizontal timeline with icons and descriptions:
-1. **Order** (ShoppingBag icon) → Browse and order composters, compost, or schedule waste collection
-2. **Collect** (Truck icon) → We pick up your organic waste or deliver your equipment
-3. **Compost** (Recycle icon) → Waste is transformed into nutrient-rich organic compost
-4. **Grow** (Sprout icon) → Use compost to grow healthier crops and gardens
+## 2. Newsletter Signup in Footer
 
-Design: Horizontal step indicators connected by a dotted line, each step as a card with icon, number badge, title, and description. Framer-motion staggered entry animation. Responsive: horizontal on desktop, vertical stack on mobile.
+Add an email input + subscribe button in the footer:
+- Store subscriptions in a new `newsletter_subscribers` table
+- Fields: `id`, `email`, `subscribed_at`
+- RLS: anyone can insert (anon), no public reads
+- Toast confirmation on subscribe
 
-**Edit: `src/pages/Index.tsx`**
-Insert `HowItWorksSection` between `FeaturesSection` and `ProductHighlights`:
-```
-Hero → Features → How It Works → Products → Testimonials → CTA
-```
+**Migration:** Create `newsletter_subscribers` table with RLS
 
-## 3. Files Summary
+## 3. WhatsApp Floating Chat Button
+
+Add a fixed WhatsApp button (bottom-right) on all pages linking to `wa.me/254700116655`
+
+## 4. Key Copy Fixes
+- Hero CTAs: "Start Composting Today →" and "Schedule Free Collection"
+- Footer phone number fix
+
+## Files Summary
 
 | Action | File | Purpose |
 |--------|------|---------|
-| Create | `src/components/landing/HowItWorksSection.tsx` | 4-step process section |
-| Edit | `src/pages/Index.tsx` | Add HowItWorks import + placement |
-| Migration | SQL | Update 3 product image_url values |
+| Edit | `src/components/landing/Footer.tsx` | Remove MyEcoLoop, add newsletter form, fix phone |
+| Edit | `src/components/landing/HeroSection.tsx` | Remove MyEcoLoop badge, update copy |
+| Rewrite | `src/pages/About.tsx` | Complete rebuild without MyEcoLoop |
+| Create | `src/components/WhatsAppButton.tsx` | Floating WhatsApp chat button |
+| Edit | `src/App.tsx` | Add WhatsApp button globally |
+| Migration | SQL | Create newsletter_subscribers table |
 
 ## Implementation Order
-1. Run migration to fix 3 missing product images
-2. Create HowItWorksSection component
-3. Add to Index.tsx landing page
-
+1. Database migration for newsletter_subscribers
+2. Fix Footer (brand + newsletter + phone)
+3. Fix HeroSection (brand + copy)
+4. Rebuild About page
+5. Add WhatsApp floating button
+6. Global codebase search for any remaining MyEcoLoop/Ecoloop references
