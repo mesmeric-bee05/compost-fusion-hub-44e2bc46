@@ -29,6 +29,7 @@ import Ussd from "./pages/Ussd";
 import Contact from "./pages/Contact";
 import Faq from "./pages/Faq";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import WhatsAppButton from "./components/WhatsAppButton";
 
 const queryClient = new QueryClient();
 
