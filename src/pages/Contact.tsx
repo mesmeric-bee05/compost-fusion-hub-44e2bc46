@@ -24,7 +24,7 @@ const contactSchema = z.object({
 const channels = [
   { icon: MessageSquare, label: "WhatsApp", value: "+254 700 000 000", href: "https://wa.me/254700000000" },
   { icon: Mail, label: "Email", value: "info@captaincompost.co.ke", href: "mailto:info@captaincompost.co.ke" },
-  { icon: Phone, label: "Call Us", value: "+254 700 000 000", href: "tel:+254700000000" },
+  { icon: Phone, label: "Call Us", value: "+254 700 116 655", href: "tel:+254700116655" },
   { icon: Hash, label: "USSD", value: "Dial *384*555#", href: "/ussd" },
 ];
 
