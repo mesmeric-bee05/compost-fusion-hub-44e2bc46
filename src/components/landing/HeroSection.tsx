@@ -20,7 +20,7 @@ const HeroSection = () => {
             <div className="mb-4 flex flex-wrap gap-2">
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
                 <Leaf className="h-4 w-4" />
-                Captain Compost × MyEcoLoop
+                Kenya's Composting Champion
               </div>
               <Link to="/ussd" className="inline-flex items-center gap-2 rounded-full border border-secondary/30 bg-secondary/10 px-4 py-1.5 text-sm font-medium text-secondary-foreground hover:bg-secondary/20 transition-colors">
                 <Hash className="h-4 w-4" />
@@ -34,18 +34,17 @@ const HeroSection = () => {
             </h1>
 
             <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
-              From organic waste collection to premium compost production — we provide the equipment, 
-              education, and ecosystem to make composting accessible for every Kenyan household, farm, and institution.
+              We deliver premium composting equipment, schedule waste collection from your doorstep, and supply lab-certified organic compost — all orderable via website, WhatsApp, or USSD *384*555# from any phone in Kenya.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button size="lg" className="gap-2 text-base" asChild>
                 <Link to="/products">
-                  Explore Products <ArrowRight className="h-4 w-4" />
+                  Start Composting Today <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="gap-2 text-base" asChild>
-                <Link to="/collections">Request Pickup</Link>
+                <Link to="/collections">Schedule Free Collection</Link>
               </Button>
             </div>
 
