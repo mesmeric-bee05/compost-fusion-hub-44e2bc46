@@ -10,6 +10,7 @@ import NotificationCenter from "@/components/notifications/NotificationCenter";
 
 const navLinks = [
   { label: "Products", href: "/products" },
+  { label: "Bundles", href: "/bundles" },
   { label: "Collections", href: "/collections" },
   { label: "Education", href: "/education" },
   { label: "USSD", href: "/ussd" },

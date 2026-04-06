@@ -28,6 +28,7 @@ import Bookmarks from "./pages/Bookmarks";
 import Ussd from "./pages/Ussd";
 import Contact from "./pages/Contact";
 import Faq from "./pages/Faq";
+import Bundles from "./pages/Bundles";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import WhatsAppButton from "./components/WhatsAppButton";
 
@@ -48,6 +49,7 @@ const App = () => (
           <Route path="/products/:slug" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/compare" element={<Compare />} />
+          <Route path="/bundles" element={<Bundles />} />
           <Route path="/collections" element={<Collections />} />
           <Route path="/education" element={<Education />} />
           <Route path="/community" element={<Community />} />
