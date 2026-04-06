@@ -28,6 +28,7 @@ import Bookmarks from "./pages/Bookmarks";
 import Ussd from "./pages/Ussd";
 import Contact from "./pages/Contact";
 import Faq from "./pages/Faq";
+import Bundles from "./pages/Bundles";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import WhatsAppButton from "./components/WhatsAppButton";
 
