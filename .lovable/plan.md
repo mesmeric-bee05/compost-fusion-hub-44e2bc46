@@ -1,59 +1,88 @@
 
-# Comprehensive Audit Implementation — Phase 1
+
+# Plan: Product Bundles Page & Continued Project Enhancement
 
 ## Overview
-Implementing the most critical items from the full audit document: brand violation fixes (CRITICAL), newsletter footer signup, About page rebuild, hero/nav fixes, and key UX improvements.
+Add a curated Product Bundles page where customers can purchase pre-packaged equipment + compost combinations at discounted prices. Bundles are stored in a new database table and rendered on a dedicated `/bundles` page with "Add All to Cart" functionality.
 
-## 1. CRITICAL — Remove All MyEcoLoop/Ecoloop References
+## 1. Database: `product_bundles` Table
 
-**Footer (`Footer.tsx`):**
-- Remove "× MyEcoLoop" from copyright line → "© 2026 Captain Compost. All rights reserved."
-- Rewrite brand description to remove "Partnered with MyEcoLoop"
-- Replace phone number `+254 700 000 000` → `+254 700 116 655`
+**Migration:**
+```sql
+CREATE TABLE public.product_bundles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  slug text UNIQUE NOT NULL,
+  description text,
+  image_url text,
+  discount_percent numeric NOT NULL DEFAULT 10,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 
-**Hero (`HeroSection.tsx`):**
-- Remove "Captain Compost × MyEcoLoop" badge → "🌱 Kenya's Composting Champion"
-- Update subheadline to more action-oriented copy
+CREATE TABLE public.bundle_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  bundle_id uuid NOT NULL REFERENCES product_bundles(id) ON DELETE CASCADE,
+  product_id uuid NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  quantity integer NOT NULL DEFAULT 1,
+  UNIQUE(bundle_id, product_id)
+);
 
-**Navbar (`Navbar.tsx`):**
-- Ensure no "Powered by Ecoloop Africa" subtitle exists (verify clean)
+ALTER TABLE product_bundles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bundle_items ENABLE ROW LEVEL SECURITY;
 
-**About page (`About.tsx`):**
-- Complete rebuild: remove MyEcoLoop card, rewrite narrative, add mission/vision/values, offerings list, team section placeholder
+-- Anyone can view active bundles
+CREATE POLICY "Anyone can view active bundles" ON product_bundles FOR SELECT TO public USING (is_active = true);
+CREATE POLICY "Admins can manage bundles" ON product_bundles FOR ALL TO authenticated USING (has_role(auth.uid(), 'admin'));
 
-## 2. Newsletter Signup in Footer
+CREATE POLICY "Anyone can view bundle items" ON bundle_items FOR SELECT TO public USING (true);
+CREATE POLICY "Admins can manage bundle items" ON bundle_items FOR ALL TO authenticated USING (has_role(auth.uid(), 'admin'));
+```
 
-Add an email input + subscribe button in the footer:
-- Store subscriptions in a new `newsletter_subscribers` table
-- Fields: `id`, `email`, `subscribed_at`
-- RLS: anyone can insert (anon), no public reads
-- Toast confirmation on subscribe
+**Seed 3 bundles** (via insert tool after migration):
+1. **Home Starter Kit** — Aerobin 200L + Compost 5kg (15% off)
+2. **Farm Pro Bundle** — Aerobin 400L + Compost 50kg + Training (20% off)
+3. **School Green Package** — Aerobin 200L + RVM + Compost 20kg (10% off)
 
-**Migration:** Create `newsletter_subscribers` table with RLS
+## 2. New Hook: `src/hooks/useBundles.ts`
 
-## 3. WhatsApp Floating Chat Button
+- `useBundles()` — fetches active bundles with their items joined to products
+- Query: `product_bundles` → `bundle_items` → `products` (nested select)
+- Returns bundle name, description, image, discount, total original price, discounted price, and product list
 
-Add a fixed WhatsApp button (bottom-right) on all pages linking to `wa.me/254700116655`
+## 3. New Page: `src/pages/Bundles.tsx`
 
-## 4. Key Copy Fixes
-- Hero CTAs: "Start Composting Today →" and "Schedule Free Collection"
-- Footer phone number fix
+- Grid of bundle cards, each showing:
+  - Bundle image, name, description
+  - List of included products with quantities
+  - Original price (strikethrough) vs discounted price
+  - Savings badge ("Save 15%")
+  - "Add Bundle to Cart" button (adds all products to cart)
+- Navbar + Footer layout consistent with Products page
+- Empty state if no bundles
 
-## Files Summary
+## 4. Route & Navigation Updates
 
-| Action | File | Purpose |
-|--------|------|---------|
-| Edit | `src/components/landing/Footer.tsx` | Remove MyEcoLoop, add newsletter form, fix phone |
-| Edit | `src/components/landing/HeroSection.tsx` | Remove MyEcoLoop badge, update copy |
-| Rewrite | `src/pages/About.tsx` | Complete rebuild without MyEcoLoop |
-| Create | `src/components/WhatsAppButton.tsx` | Floating WhatsApp chat button |
-| Edit | `src/App.tsx` | Add WhatsApp button globally |
-| Migration | SQL | Create newsletter_subscribers table |
+| File | Change |
+|------|--------|
+| `src/App.tsx` | Add `/bundles` route |
+| `src/components/landing/Navbar.tsx` | Add "Bundles" link in Shop dropdown or nav |
+
+## 5. Files Summary
+
+| Action | File |
+|--------|------|
+| Migration | Create `product_bundles` + `bundle_items` tables with RLS |
+| Seed | Insert 3 bundles + their items |
+| Create | `src/hooks/useBundles.ts` |
+| Create | `src/pages/Bundles.tsx` |
+| Edit | `src/App.tsx` — add route |
+| Edit | `src/components/landing/Navbar.tsx` — add nav link |
 
 ## Implementation Order
-1. Database migration for newsletter_subscribers
-2. Fix Footer (brand + newsletter + phone)
-3. Fix HeroSection (brand + copy)
-4. Rebuild About page
-5. Add WhatsApp floating button
-6. Global codebase search for any remaining MyEcoLoop/Ecoloop references
+1. Run migration (tables + RLS)
+2. Seed 3 bundles with product references
+3. Create useBundles hook
+4. Create Bundles page
+5. Add route and navigation
+
