@@ -21,6 +21,7 @@ const tabs = [
   { id: "collections", label: "Collections", icon: Recycle },
   { id: "users", label: "Users", icon: Users },
   { id: "coupons", label: "Coupons", icon: Ticket },
+  { id: "bundles", label: "Bundles", icon: Package },
   { id: "content", label: "Content", icon: BookOpen },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
 ] as const;
