@@ -68,6 +68,7 @@ export default function AdminDashboard() {
           </div>
         )}
         {tab === "orders" && <OrdersTable />}
+        {tab === "products" && <ProductsManager />}
         {tab === "collections" && <CollectionsTable />}
         {tab === "users" && <UsersTable />}
         {tab === "coupons" && <CouponsManager />}
