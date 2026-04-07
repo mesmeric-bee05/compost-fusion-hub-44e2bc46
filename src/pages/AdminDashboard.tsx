@@ -76,6 +76,7 @@ export default function AdminDashboard() {
         {tab === "coupons" && <CouponsManager />}
         {tab === "bundles" && <BundlesManager />}
         {tab === "content" && <ContentManager />}
+        {tab === "contacts" && <ContactSubmissionsManager />}
         {tab === "analytics" && <AnalyticsDashboard />}
       </div>
       <Footer />
