@@ -2,7 +2,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Leaf, Globe, Handshake, Sprout, ShoppingBag, Truck, BookOpen, Hash, Recycle, Factory, Award, ArrowRight } from "lucide-react";
+import { Leaf, Globe, Handshake, Sprout, ShoppingBag, Truck, BookOpen, Hash, Recycle, Factory, Award, ArrowRight, Monitor } from "lucide-react";
 
 const offerings = [
   { icon: Sprout, label: "Composting Equipment", desc: "Aerobin composters for homes, farms & institutions" },
