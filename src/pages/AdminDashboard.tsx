@@ -13,8 +13,9 @@ import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
 import ContentManager from "@/components/admin/ContentManager";
 import BundlesManager from "@/components/admin/BundlesManager";
 import ProductsManager from "@/components/admin/ProductsManager";
+import ContactSubmissionsManager from "@/components/admin/ContactSubmissionsManager";
 import { Button } from "@/components/ui/button";
-import { Loader2, LayoutDashboard, ShoppingCart, ShoppingBag, Recycle, Users, Ticket, BarChart3, BookOpen, Package } from "lucide-react";
+import { Loader2, LayoutDashboard, ShoppingCart, ShoppingBag, Recycle, Users, Ticket, BarChart3, BookOpen, Package, MessageSquare } from "lucide-react";
 
 const tabs = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
