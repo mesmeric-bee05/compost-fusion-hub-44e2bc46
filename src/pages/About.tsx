@@ -96,11 +96,12 @@ export default function About() {
         <div className="mt-16 text-center">
           <h2 className="font-display text-2xl font-bold text-foreground">The People Behind Captain Compost</h2>
           <p className="mt-2 text-muted-foreground">Our passionate team is dedicated to Kenya's green future.</p>
-          <div className="mt-8 grid gap-6 sm:grid-cols-3">
+          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { name: "Alvin K.", role: "Founder & CEO", icon: Award },
-              { name: "Grace M.", role: "Head of Operations", icon: Truck },
-              { name: "James O.", role: "Lead Agronomist", icon: Sprout },
+              { name: "Alice", role: "Founder & CEO", icon: Award },
+              { name: "Paulette Hawi", role: "Head of Operations", icon: Truck },
+              { name: "Alvin Macharia", role: "Head CTO/Technician", icon: Monitor },
+              { name: "Ernest Njambi", role: "Lead Agronomist", icon: Sprout },
             ].map((m) => (
               <div key={m.name} className="rounded-xl bg-card p-6 text-center shadow-sm">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
