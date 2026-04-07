@@ -58,8 +58,8 @@ export default function ProductsManager() {
 
   const upsert = useMutation({
     mutationFn: async () => {
-      let specs: Record<string, string | number | boolean | null> = {};
-      try { specs = JSON.parse(form.specifications); } catch { /* keep empty */ }
+      let specs: Record<string, string | number | boolean | null> | null = {};
+      try { specs = JSON.parse(form.specifications) as Record<string, string | number | boolean | null>; } catch { specs = null; }
 
       const payload: TablesInsert<"products"> | TablesUpdate<"products"> = {
         name: form.name.trim(),
