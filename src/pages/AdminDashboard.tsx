@@ -19,7 +19,7 @@ import { Loader2, LayoutDashboard, ShoppingCart, ShoppingBag, Recycle, Users, Ti
 const tabs = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "orders", label: "Orders", icon: ShoppingCart },
-  { id: "products", label: "Products", icon: ShoppingCart },
+  { id: "products", label: "Products", icon: ShoppingBag },
   { id: "collections", label: "Collections", icon: Recycle },
   { id: "users", label: "Users", icon: Users },
   { id: "coupons", label: "Coupons", icon: Ticket },
