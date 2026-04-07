@@ -1,38 +1,42 @@
 
+# Plan: Admin Products Manager + Team Fix + Verification
 
-# Plan: Featured Bundles Section + Admin Bundle Management
+## 1. Fix About Page Team Members
 
-## 1. Featured Bundles Landing Page Section
+Update `src/pages/About.tsx` lines 100-103 to correct the team:
+- Alice — Founder & CEO
+- Paulette Hawi — Head of Operations
+- Alvin Macharia — Head CTO/Technician
+- Ernest Njambi — Lead Agronomist
 
-Create `src/components/landing/FeaturedBundles.tsx` — a section showing the 3 bundles in a compact card grid with savings badges, discounted prices, and a "View All Bundles" link to `/bundles`. Reuses the `useBundles` hook.
+Change from 3 to 4 team members, add a `Monitor` icon for the CTO role.
 
-**Add to `src/pages/Index.tsx`** between ProductHighlights and TestimonialsSection.
+## 2. Admin Products Manager
 
-## 2. Admin Bundle Management
+Create `src/components/admin/ProductsManager.tsx` — full CRUD for products:
+- **List view**: Table with product name, category, price, stock, active status, edit/delete actions
+- **Create/Edit dialog**: Form with name, slug (auto-generated), short description, full description, category (select from existing categories: composters, compost, recycling, services, industrial, subscriptions), price, currency, stock quantity, image upload (reuses `ImageUpload` with `product-images` bucket), gallery, specifications (JSON editor), bulk discount %, active toggle
+- React Query mutations for insert/update/delete against `products` table
+- Pattern follows `CouponsManager.tsx` and `BundlesManager.tsx`
 
-Create `src/components/admin/BundlesManager.tsx` — full CRUD interface for bundles:
-- **List view**: Table showing bundle name, discount %, item count, active status, with edit/delete actions
-- **Create/Edit dialog**: Form with name, slug (auto-generated from name), description, discount %, image upload (reuses `ImageUpload` component), active toggle
-- **Bundle items sub-form**: Multi-select products from existing products table, set quantity per product, add/remove items
-- Uses React Query mutations for create/update/delete against `product_bundles` and `bundle_items` tables
-- Pattern follows existing `ContentManager.tsx` and `CouponsManager.tsx` conventions
+## 3. Add Products Tab to Admin Dashboard
 
-**Add "Bundles" tab to `src/pages/AdminDashboard.tsx`** with a `Package` icon from lucide-react, placed after "Coupons" tab.
+Update `src/pages/AdminDashboard.tsx`:
+- Import `ProductsManager`
+- Add `{ id: "products", label: "Products", icon: ShoppingBag }` tab after "orders"
+- Render `<ProductsManager />` when tab is active
 
 ## Files Summary
 
 | Action | File | Purpose |
 |--------|------|---------|
-| Create | `src/components/landing/FeaturedBundles.tsx` | Landing page bundles preview |
-| Create | `src/components/admin/BundlesManager.tsx` | Admin CRUD for bundles |
-| Edit | `src/pages/Index.tsx` | Add FeaturedBundles section |
-| Edit | `src/pages/AdminDashboard.tsx` | Add Bundles tab |
+| Edit | `src/pages/About.tsx` | Fix team names to Alice, Paulette, Alvin, Ernest |
+| Create | `src/components/admin/ProductsManager.tsx` | Admin CRUD for products |
+| Edit | `src/pages/AdminDashboard.tsx` | Add Products tab |
 
-No database changes needed — tables and RLS already exist.
+No database changes needed — products table and RLS already exist.
 
 ## Implementation Order
-1. Create FeaturedBundles landing section
-2. Add to Index.tsx
-3. Create BundlesManager admin component
-4. Add Bundles tab to AdminDashboard
-
+1. Fix About page team members
+2. Create ProductsManager component
+3. Add Products tab to AdminDashboard
