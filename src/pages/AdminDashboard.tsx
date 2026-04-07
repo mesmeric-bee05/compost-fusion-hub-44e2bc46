@@ -12,6 +12,7 @@ import CouponsManager from "@/components/admin/CouponsManager";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
 import ContentManager from "@/components/admin/ContentManager";
 import BundlesManager from "@/components/admin/BundlesManager";
+import ProductsManager from "@/components/admin/ProductsManager";
 import { Button } from "@/components/ui/button";
 import { Loader2, LayoutDashboard, ShoppingCart, Recycle, Users, Ticket, BarChart3, BookOpen, Package } from "lucide-react";
 
