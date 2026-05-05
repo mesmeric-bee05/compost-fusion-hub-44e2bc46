@@ -1,42 +1,64 @@
+# Plan: Newsletter Subscribers Manager + Verification + Hardening
 
-# Plan: Admin Products Manager + Team Fix + Verification
+## 1. Newsletter Subscribers Admin Manager
 
-## 1. Fix About Page Team Members
-
-Update `src/pages/About.tsx` lines 100-103 to correct the team:
-- Alice — Founder & CEO
-- Paulette Hawi — Head of Operations
-- Alvin Macharia — Head CTO/Technician
-- Ernest Njambi — Lead Agronomist
-
-Change from 3 to 4 team members, add a `Monitor` icon for the CTO role.
-
-## 2. Admin Products Manager
-
-Create `src/components/admin/ProductsManager.tsx` — full CRUD for products:
-- **List view**: Table with product name, category, price, stock, active status, edit/delete actions
-- **Create/Edit dialog**: Form with name, slug (auto-generated), short description, full description, category (select from existing categories: composters, compost, recycling, services, industrial, subscriptions), price, currency, stock quantity, image upload (reuses `ImageUpload` with `product-images` bucket), gallery, specifications (JSON editor), bulk discount %, active toggle
-- React Query mutations for insert/update/delete against `products` table
-- Pattern follows `CouponsManager.tsx` and `BundlesManager.tsx`
-
-## 3. Add Products Tab to Admin Dashboard
+Create `src/components/admin/NewsletterSubscribersManager.tsx`:
+- Lists all rows from `newsletter_subscribers` (admin-only via existing RLS)
+- Search/filter by email
+- Subscriber count + subscribed date
+- **Export to CSV** button — generates a client-side CSV download (`email,subscribed_at`)
+- **Copy all emails** button (comma-separated, for pasting into mailing tools)
+- Delete subscriber (RLS already allows admin DELETE)
+- Pattern follows `ContactSubmissionsManager.tsx`
 
 Update `src/pages/AdminDashboard.tsx`:
-- Import `ProductsManager`
-- Add `{ id: "products", label: "Products", icon: ShoppingBag }` tab after "orders"
-- Render `<ProductsManager />` when tab is active
+- Add `{ id: "subscribers", label: "Subscribers", icon: Mail }` tab
+- Render `<NewsletterSubscribersManager />`
+
+## 2. Verification Pass (read-only checks)
+
+Use the browser tool to:
+- Visit `/admin` → Products tab: open create dialog, fill fields, upload an image, submit, confirm row appears in table.
+- Visit `/admin` → Contacts tab: confirm submissions render with Read/Unread badges and detail dialog marks-as-read.
+- Visit `/admin` → Subscribers tab (new): confirm list, CSV export, delete.
+
+Fix any runtime issues found during verification.
+
+## 3. USSD Feature Audit
+
+Review `supabase/functions/ussd-handler/index.ts` and `src/pages/Ussd.tsx`:
+- Confirm CORS, session persistence in `ussd_sessions`, M-Pesa STK trigger path.
+- Add zod input validation for `sessionId`, `phoneNumber`, `text` form fields.
+- Phone-number normalization helper (handle `+254`, `254`, `0…` consistently for the eco-points lookup).
+- Defensive null-checks on `session.session_data` cast (currently `as any`) — replace with typed parse.
+- Add a simple `/ussd` simulator panel improvement note only if `Ussd.tsx` lacks one (read first, then decide).
+
+## 4. Security Hardening
+
+- Run `supabase--linter` and address any new warnings.
+- Run `security--run_security_scan` and triage findings (fix or document via memory).
+- Verify `password_hibp_enabled` is on (configure_auth if not).
+- Audit RLS for any newly-touched tables (none expected — no schema changes).
+- Confirm no client code references service-role keys.
+
+## 5. Error Sweep
+
+- `rg "console.error|TODO|FIXME"` across `src/` and `supabase/functions/` to surface latent issues.
+- Read `src/pages/Ussd.tsx`, `ProductsManager.tsx`, `ContactSubmissionsManager.tsx` for type safety; replace `as any` casts with typed shapes where trivial.
 
 ## Files Summary
 
-| Action | File | Purpose |
-|--------|------|---------|
-| Edit | `src/pages/About.tsx` | Fix team names to Alice, Paulette, Alvin, Ernest |
-| Create | `src/components/admin/ProductsManager.tsx` | Admin CRUD for products |
-| Edit | `src/pages/AdminDashboard.tsx` | Add Products tab |
+| Action | File |
+|---|---|
+| Create | `src/components/admin/NewsletterSubscribersManager.tsx` |
+| Edit | `src/pages/AdminDashboard.tsx` (add Subscribers tab) |
+| Edit | `supabase/functions/ussd-handler/index.ts` (zod validation, typed session_data, phone normalization) |
+| Edit | `src/pages/Ussd.tsx` (only if issues found during read) |
 
-No database changes needed — products table and RLS already exist.
+No DB schema changes — all required tables and RLS already exist.
 
 ## Implementation Order
-1. Fix About page team members
-2. Create ProductsManager component
-3. Add Products tab to AdminDashboard
+1. Create NewsletterSubscribersManager + wire tab
+2. Harden ussd-handler (validation + types)
+3. Run linter + security scan; fix findings
+4. Browser-verify Products, Contacts, Subscribers flows; patch any bugs found
