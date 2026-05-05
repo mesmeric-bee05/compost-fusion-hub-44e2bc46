@@ -79,6 +79,7 @@ export default function AdminDashboard() {
         {tab === "bundles" && <BundlesManager />}
         {tab === "content" && <ContentManager />}
         {tab === "contacts" && <ContactSubmissionsManager />}
+        {tab === "subscribers" && <NewsletterSubscribersManager />}
         {tab === "analytics" && <AnalyticsDashboard />}
       </div>
       <Footer />
