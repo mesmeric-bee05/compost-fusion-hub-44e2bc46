@@ -14,8 +14,9 @@ import ContentManager from "@/components/admin/ContentManager";
 import BundlesManager from "@/components/admin/BundlesManager";
 import ProductsManager from "@/components/admin/ProductsManager";
 import ContactSubmissionsManager from "@/components/admin/ContactSubmissionsManager";
+import NewsletterSubscribersManager from "@/components/admin/NewsletterSubscribersManager";
 import { Button } from "@/components/ui/button";
-import { Loader2, LayoutDashboard, ShoppingCart, ShoppingBag, Recycle, Users, Ticket, BarChart3, BookOpen, Package, MessageSquare } from "lucide-react";
+import { Loader2, LayoutDashboard, ShoppingCart, ShoppingBag, Recycle, Users, Ticket, BarChart3, BookOpen, Package, MessageSquare, Mail } from "lucide-react";
 
 const tabs = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -27,6 +28,7 @@ const tabs = [
   { id: "bundles", label: "Bundles", icon: Package },
   { id: "content", label: "Content", icon: BookOpen },
   { id: "contacts", label: "Contacts", icon: MessageSquare },
+  { id: "subscribers", label: "Subscribers", icon: Mail },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
 ] as const;
 
@@ -77,6 +79,7 @@ export default function AdminDashboard() {
         {tab === "bundles" && <BundlesManager />}
         {tab === "content" && <ContentManager />}
         {tab === "contacts" && <ContactSubmissionsManager />}
+        {tab === "subscribers" && <NewsletterSubscribersManager />}
         {tab === "analytics" && <AnalyticsDashboard />}
       </div>
       <Footer />
