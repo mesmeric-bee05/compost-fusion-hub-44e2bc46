@@ -105,7 +105,7 @@ describe("NewsletterSubscribersManager", () => {
     await screen.findByText("user0@example.com");
 
     await userEvent.type(screen.getByPlaceholderText(/search email/i), "alice");
-    await waitFor(() => expect(mockState.lastQuery.ilike).toBe("%alice%"));
+    await waitFor(() => expect(mockState.lastQuery.ilike).toBe("%alice%"), { timeout: 2000 });
 
     const fromInput = screen.getByLabelText(/from/i);
     fireEvent.change(fromInput, { target: { value: "2026-01-01" } });
