@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          target_count: number
+          target_emails: string[]
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          target_count?: number
+          target_emails?: string[]
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          target_count?: number
+          target_emails?: string[]
+        }
+        Relationships: []
+      }
       article_bookmarks: {
         Row: {
           content_id: string
@@ -977,6 +1007,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      log_admin_action: {
+        Args: {
+          _action: string
+          _admin_id: string
+          _emails: string[]
+          _metadata?: Json
+        }
+        Returns: string
       }
     }
     Enums: {
