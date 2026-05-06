@@ -104,7 +104,7 @@ describe("NewsletterSubscribersManager", () => {
     renderUI();
     await screen.findByText("user0@example.com");
 
-    await userEvent.type(screen.getByPlaceholderText(/search email/i), "alice");
+    fireEvent.change(screen.getByPlaceholderText(/search email/i), { target: { value: "alice" } });
     await waitFor(() => expect(mockState.lastQuery.ilike).toBe("%alice%"), { timeout: 2000 });
 
     const fromInput = screen.getByLabelText(/from/i);
