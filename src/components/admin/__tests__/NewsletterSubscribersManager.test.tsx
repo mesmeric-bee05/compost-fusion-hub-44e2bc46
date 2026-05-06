@@ -182,7 +182,9 @@ describe("NewsletterSubscribersManager", () => {
     const selectAll = within(banner).getByRole("button", { name: /select all 50 matching/i });
     await userEvent.click(selectAll);
 
-    await screen.findByText(/all 50 matching subscribers selected/i);
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toMatch(/all 50 matching subscribers selected/i),
+    );
 
     await userEvent.click(screen.getByRole("button", { name: /delete 50/i }));
     const dialog = await screen.findByRole("alertdialog");
