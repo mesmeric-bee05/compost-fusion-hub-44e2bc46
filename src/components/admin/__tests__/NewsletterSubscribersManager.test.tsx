@@ -107,8 +107,8 @@ describe("NewsletterSubscribersManager", () => {
     fireEvent.change(screen.getByPlaceholderText(/search email/i), { target: { value: "alice" } });
     await waitFor(() => expect(mockState.lastQuery.ilike).toBe("%alice%"), { timeout: 2000 });
 
-    const fromInput = screen.getByLabelText(/from/i);
-    fireEvent.change(fromInput, { target: { value: "2026-01-01" } });
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    fireEvent.change(dateInputs[0]!, { target: { value: "2026-01-01" } });
     await waitFor(() => expect(mockState.lastQuery.gte).toBeTruthy());
     expect(mockState.lastQuery.range).toEqual([0, 19]);
   });
