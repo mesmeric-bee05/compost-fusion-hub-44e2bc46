@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
@@ -16,7 +16,7 @@ import ProductsManager from "@/components/admin/ProductsManager";
 import ContactSubmissionsManager from "@/components/admin/ContactSubmissionsManager";
 import NewsletterSubscribersManager from "@/components/admin/NewsletterSubscribersManager";
 import { Button } from "@/components/ui/button";
-import { Loader2, LayoutDashboard, ShoppingCart, ShoppingBag, Recycle, Users, Ticket, BarChart3, BookOpen, Package, MessageSquare, Mail } from "lucide-react";
+import { Loader2, LayoutDashboard, ShoppingCart, ShoppingBag, Recycle, Users, Ticket, BarChart3, BookOpen, Package, MessageSquare, Mail, ShieldCheck } from "lucide-react";
 
 const tabs = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -50,7 +50,15 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container py-8">
-        <h1 className="mb-6 font-display text-3xl font-bold">Admin Dashboard</h1>
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+          <h1 className="font-display text-3xl font-bold">Admin Dashboard</h1>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/admin/audit-log">
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              Audit Log
+            </Link>
+          </Button>
+        </div>
         <div className="flex flex-wrap gap-2 mb-6">
           {tabs.map((t) => (
             <Button
