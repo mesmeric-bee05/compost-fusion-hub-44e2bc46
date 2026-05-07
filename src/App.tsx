@@ -17,6 +17,7 @@ import Community from "./pages/Community";
 import About from "./pages/About";
 import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminAuditLog from "./pages/AdminAuditLog";
 import DriverDashboard from "./pages/DriverDashboard";
 import OrderTracking from "./pages/OrderTracking";
 import Wishlist from "./pages/Wishlist";
@@ -60,6 +61,7 @@ const App = () => (
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/audit-log" element={<ProtectedRoute><AdminAuditLog /></ProtectedRoute>} />
           <Route path="/driver" element={<ProtectedRoute><DriverDashboard /></ProtectedRoute>} />
           <Route path="/orders/:orderId" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
           <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />

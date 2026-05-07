@@ -129,13 +129,48 @@ export default function NewsletterSubscribersManager() {
       const { data, error } = await supabase.functions.invoke("send-newsletter-welcome", {
         body: { email: sub.email },
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error.message ?? "Send failed");
+      if (error) {
+        // FunctionsHttpError surfaces structured envelope on `context.response`.
+        const ctxResp = (error as { context?: { response?: Response } })?.context?.response;
+        if (ctxResp) {
+          try {
+            const body = await ctxResp.clone().json();
+            if (body?.error?.code === "throttled") {
+              const err = new Error(body.error.message ?? "Throttled");
+              (err as Error & { code?: string; retryAfter?: number }).code = "throttled";
+              (err as Error & { code?: string; retryAfter?: number }).retryAfter = body.error.retry_after;
+              throw err;
+            }
+            if (body?.error?.message) throw new Error(body.error.message);
+          } catch (parseErr) {
+            if ((parseErr as Error & { code?: string }).code === "throttled") throw parseErr;
+          }
+        }
+        throw error;
+      }
+      if (data?.error) {
+        if (data.error.code === "throttled") {
+          const err = new Error(data.error.message ?? "Throttled");
+          (err as Error & { code?: string; retryAfter?: number }).code = "throttled";
+          (err as Error & { code?: string; retryAfter?: number }).retryAfter = data.error.retry_after;
+          throw err;
+        }
+        throw new Error(data.error.message ?? "Send failed");
+      }
       return { email: sub.email, data };
     },
     onSuccess: ({ email }) => toast({ title: `Welcome email sent to ${email}` }),
-    onError: (e: Error) =>
-      toast({ title: "Failed to resend", description: e.message, variant: "destructive" }),
+    onError: (e: Error & { code?: string; retryAfter?: number }) => {
+      if (e.code === "throttled") {
+        toast({
+          title: "Rate limited",
+          description: `Too many resends. Try again in ${e.retryAfter ?? 60}s.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({ title: "Failed to resend", description: e.message, variant: "destructive" });
+    },
     onSettled: () => setResendingId(null),
   });
 
