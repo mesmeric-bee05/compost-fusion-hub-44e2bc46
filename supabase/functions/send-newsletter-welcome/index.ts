@@ -81,6 +81,69 @@ Deno.serve(async (req) => {
     if (roleErr) return errorResponse("server_error", roleErr.message, 500);
     if (!isAdmin) return errorResponse("forbidden", "Admin role required", 403);
 
+    // 3b. Ad-hoc rate limit using admin_audit_log history.
+    const PER_MIN = Number(Deno.env.get("NEWSLETTER_RESEND_PER_MIN") ?? 10);
+    const PER_HOUR = Number(Deno.env.get("NEWSLETTER_RESEND_PER_HOUR") ?? 100);
+    const GLOBAL_HOUR = Number(Deno.env.get("NEWSLETTER_RESEND_GLOBAL_HOUR") ?? 300);
+    const nowMs = Date.now();
+    const minAgo = new Date(nowMs - 60_000).toISOString();
+    const hourAgo = new Date(nowMs - 3_600_000).toISOString();
+
+    const checkLimit = async (
+      filter: (q: any) => any,
+      limit: number,
+      windowSeconds: number,
+      scope: "admin_minute" | "admin_hour" | "global_hour",
+    ) => {
+      const base = adminClient
+        .from("admin_audit_log")
+        .select("created_at", { count: "exact", head: false })
+        .eq("action", "newsletter.resend")
+        .order("created_at", { ascending: true })
+        .limit(1);
+      const { data, count, error } = await filter(base);
+      if (error) throw error;
+      if ((count ?? 0) >= limit) {
+        const oldest = data?.[0]?.created_at ? new Date(data[0].created_at).getTime() : nowMs;
+        const retryAfter = Math.max(1, Math.ceil((oldest + windowSeconds * 1000 - nowMs) / 1000));
+        return { throttled: true as const, retryAfter, scope, limit };
+      }
+      return { throttled: false as const };
+    };
+
+    try {
+      const checks = [
+        await checkLimit((q) => q.eq("admin_id", adminId).gte("created_at", minAgo), PER_MIN, 60, "admin_minute"),
+        await checkLimit((q) => q.eq("admin_id", adminId).gte("created_at", hourAgo), PER_HOUR, 3600, "admin_hour"),
+        await checkLimit((q) => q.gte("created_at", hourAgo), GLOBAL_HOUR, 3600, "global_hour"),
+      ];
+      const breach = checks.find((c) => c.throttled);
+      if (breach && breach.throttled) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: "throttled",
+              message: `Too many resends. Try again in ${breach.retryAfter}s.`,
+              retry_after: breach.retryAfter,
+              scope: breach.scope,
+              limit: breach.limit,
+            },
+          }),
+          {
+            status: 429,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+              "Retry-After": String(breach.retryAfter),
+            },
+          },
+        );
+      }
+    } catch (e) {
+      // If rate-limit check fails, don't block the request — log and continue.
+      console.error("rate-limit check failed", e);
+    }
+
     // 4. Validate body
     let json: unknown;
     try {
