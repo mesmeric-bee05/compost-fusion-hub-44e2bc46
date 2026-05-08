@@ -994,6 +994,13 @@ export type Database = {
         Args: { _code: string; _order_total: number }
         Returns: Json
       }
+      get_audit_admin_names: {
+        Args: { user_ids: string[] }
+        Returns: {
+          full_name: string
+          user_id: string
+        }[]
+      }
       get_leaderboard_profiles: {
         Args: { user_ids: string[] }
         Returns: {
@@ -1016,6 +1023,28 @@ export type Database = {
           _metadata?: Json
         }
         Returns: string
+      }
+      search_audit_log: {
+        Args: {
+          _action?: string
+          _email_query?: string
+          _emails?: string[]
+          _from?: string
+          _limit?: number
+          _mode?: string
+          _offset?: number
+          _to?: string
+        }
+        Returns: {
+          action: string
+          admin_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          target_count: number
+          target_emails: string[]
+          total_count: number
+        }[]
       }
     }
     Enums: {
