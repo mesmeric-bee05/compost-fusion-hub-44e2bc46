@@ -2,6 +2,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Phone, ShoppingCart, Trophy, MapPin, Lightbulb, HeadphonesIcon } from "lucide-react";
+import ussdHero from "@/assets/ussd-feature-phone.jpg";
 
 const menuItems = [
   { icon: ShoppingCart, label: "Shop Products", desc: "Browse composters, compost & services" },
@@ -20,6 +21,14 @@ const Ussd = () => (
           <h1 className="font-display text-4xl font-bold text-foreground">
             Order via <span className="text-primary">USSD</span>
           </h1>
+          <img
+            src={ussdHero}
+            alt="Smiling Kenyan woman using a feature phone in a busy market"
+            width={1024}
+            height={1024}
+            loading="lazy"
+            className="mt-6 mb-2 h-56 w-full rounded-2xl border border-border object-cover shadow-md"
+          />
           <p className="mt-4 text-lg text-muted-foreground">
             No smartphone? No internet? No problem. Dial <strong>*384*555#</strong> from any phone to browse products, check eco-points, track orders, and pay with M-Pesa — all without data.
           </p>

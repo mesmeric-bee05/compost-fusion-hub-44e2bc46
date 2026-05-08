@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Recycle, TrendingUp, Leaf, Hash } from "lucide-react";
 import { motion } from "framer-motion";
+import heroImage from "@/assets/hero-compost.jpg";
 
 const HeroSection = () => {
   return (
@@ -75,20 +76,24 @@ const HeroSection = () => {
             transition={{ duration: 0.7, delay: 0.2 }}
             className="relative hidden lg:block"
           >
-            <div className="relative mx-auto aspect-square max-w-md rounded-3xl bg-gradient-to-br from-primary/20 via-accent to-secondary/20 p-8">
-              <div className="flex h-full flex-col items-center justify-center gap-6 rounded-2xl border border-border/50 bg-card/80 p-8 backdrop-blur-sm">
-                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
-                  <Recycle className="h-10 w-10 text-primary" />
+            <div className="relative mx-auto max-w-md overflow-hidden rounded-3xl border border-border/50 shadow-2xl">
+              <img
+                src={heroImage}
+                alt="Kenyan farmer kneeling beside a green Aerobin composter in a thriving shamba with Mount Kenya in the background"
+                width={1024}
+                height={1024}
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-eco-deep/90 via-eco-deep/40 to-transparent p-6">
+                <div className="flex items-center gap-2 text-xs font-medium text-primary-foreground/90">
+                  <Recycle className="h-4 w-4" />
+                  Equipment → Collection → Compost → Marketplace
                 </div>
-                <h3 className="font-display text-xl font-bold text-foreground">Complete Ecosystem</h3>
-                <p className="text-center text-sm text-muted-foreground">
-                  Equipment → Collection → Composting → Marketplace → Impact Tracking
-                </p>
-                <div className="flex gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {["Aerobin", "RVM", "Compost"].map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground"
+                      className="rounded-full bg-primary/90 px-3 py-1 text-xs font-semibold text-primary-foreground"
                     >
                       {tag}
                     </span>
