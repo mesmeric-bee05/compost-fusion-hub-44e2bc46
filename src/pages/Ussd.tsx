@@ -2,6 +2,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Phone, ShoppingCart, Trophy, MapPin, Lightbulb, HeadphonesIcon } from "lucide-react";
+import ussdHero from "@/assets/ussd-feature-phone.jpg";
 
 const menuItems = [
   { icon: ShoppingCart, label: "Shop Products", desc: "Browse composters, compost & services" },
