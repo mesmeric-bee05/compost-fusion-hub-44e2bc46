@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Recycle, TrendingUp, Leaf, Hash } from "lucide-react";
 import { motion } from "framer-motion";
+import heroImage from "@/assets/hero-compost.jpg";
 
 const HeroSection = () => {
   return (
