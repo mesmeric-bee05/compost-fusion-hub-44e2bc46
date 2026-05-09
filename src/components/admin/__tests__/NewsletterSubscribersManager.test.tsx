@@ -88,6 +88,13 @@ beforeEach(() => {
 });
 
 describe("NewsletterSubscribersManager", () => {
+  it("shows the loading skeleton before data resolves", async () => {
+    renderUI();
+    expect(screen.getByTestId("newsletter-subscribers-skeleton")).toBeInTheDocument();
+    await screen.findByText("user0@example.com");
+    expect(screen.queryByTestId("newsletter-subscribers-skeleton")).not.toBeInTheDocument();
+  });
+
   it("paginates with server-side range and disables Prev on first page", async () => {
     renderUI();
     await screen.findByText("user0@example.com");
