@@ -76,13 +76,15 @@ beforeEach(() => {
   state.fetchImpl = async () =>
     new Response("ok", { status: 200, headers: { "X-Export-Count": "60" } });
   toastMock.mockClear();
-  // @ts-expect-error override fetch
-  global.fetch = vi.fn((url: string, init: RequestInit) => state.fetchImpl(url, init));
-  // jsdom URL stubs
-  // @ts-expect-error
-  global.URL.createObjectURL ??= () => "blob:test";
-  // @ts-expect-error
-  global.URL.revokeObjectURL ??= () => {};
+  (global as unknown as { fetch: unknown }).fetch = vi.fn(
+    (url: string, init: RequestInit) => state.fetchImpl(url, init),
+  );
+  if (!global.URL.createObjectURL) {
+    (global.URL as unknown as { createObjectURL: () => string }).createObjectURL = () => "blob:test";
+  }
+  if (!global.URL.revokeObjectURL) {
+    (global.URL as unknown as { revokeObjectURL: () => void }).revokeObjectURL = () => {};
+  }
   HTMLAnchorElement.prototype.click = vi.fn();
 });
 
