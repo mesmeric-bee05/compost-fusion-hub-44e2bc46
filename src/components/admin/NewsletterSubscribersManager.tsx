@@ -14,6 +14,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Trash2, Download, Copy, Search, Mail, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
+import NewsletterSubscribersSkeleton from "./skeletons/NewsletterSubscribersSkeleton";
 
 type Subscriber = Tables<"newsletter_subscribers">;
 
@@ -249,8 +250,7 @@ export default function NewsletterSubscribersManager() {
 
   const clearFilters = () => { setQuery(""); setFrom(""); setTo(""); setPage(0); setMatchAll(false); };
 
-  if (isLoading)
-    return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (isLoading) return <NewsletterSubscribersSkeleton />;
 
   const showMatchAllBanner = allOnPageSelected && total > rows.length && !matchAll;
   const effectiveCount = matchAll ? total : selected.size;
