@@ -1,116 +1,109 @@
-# Deep upgrade: Audit Log, Security, USSD, UX & Imagery
+# Plan: Security hardening + test coverage + newsletter skeletons
 
-## 1. Audit Log email filter — partial + multi-email
+Four focused workstreams. Each is independently shippable; I'll do them in one pass.
 
-**UI (`AuditLogTable.tsx`)**
-- Replace single email input with a small composite control: a Tabs/Toggle ("Contains" | "Multi-exact") and an input.
-- Multi-exact mode parses comma/space separated emails into pill chips (with remove-x); validates each with zod, shows inline feedback ("3 emails • 1 invalid").
-- Contains mode performs case-insensitive partial matching on any email in `target_emails`.
-- Debounced (300 ms) query updates; result-count chip ("Matches X of Y").
+---
 
-**Query layer**
-- Add Postgres RPC `search_audit_log(_action text, _from timestamptz, _to timestamptz, _email_query text, _emails text[], _mode text, _limit int, _offset int)` returning rows + total count.
-  - Contains: `EXISTS (SELECT 1 FROM unnest(target_emails) e WHERE e ILIKE '%' || _email_query || '%')`.
-  - Multi-exact: `target_emails && _emails`.
-  - Internally calls `has_role(auth.uid(),'admin')` and raises `not_admin` otherwise.
-- Frontend swaps the direct `from('admin_audit_log')` call for `supabase.rpc('search_audit_log', …)`.
+## 1. Supabase security linter cleanup
 
-**Tests** (`AuditLogTable.test.tsx`)
-- Switching modes updates query shape.
-- Invalid email pills are flagged.
-- Empty result renders "No matches" with reset CTA.
+**Goal:** clear remaining warnings around storage bucket exposure and over-permissive `SECURITY DEFINER` functions.
 
-## 2. RLS & RPC hardening
+Steps:
+- Run `supabase--linter` first to confirm current warnings (so we fix what's actually flagged, not guesswork).
+- For each public storage bucket (`product-images`, `review-images`, `content-images`):
+  - Keep `public = true` only where genuinely needed; otherwise flip to `false` and add a public-read RLS policy scoped to that bucket so listing the bucket root is not possible.
+  - Add explicit `storage.objects` policies: `SELECT` allowed for `bucket_id = '<x>'`; `INSERT/UPDATE/DELETE` restricted to admins (or owners by `(storage.foldername(name))[1] = auth.uid()::text` where applicable).
+  - Revoke any blanket `anon` listing on `storage.objects` that's not needed.
+- For `SECURITY DEFINER` functions, tighten `EXECUTE`:
+  - `apply_coupon`, `search_audit_log`, `get_audit_admin_names`, `get_leaderboard_profiles`, `log_admin_action`, `has_role`:
+    - `REVOKE ALL ON FUNCTION ... FROM PUBLIC, anon;`
+    - `GRANT EXECUTE ... TO authenticated;` (admin-only ones rely on internal `has_role` check; that's already in place).
+  - Confirm every definer function has `SET search_path = public` (already true per current schema).
+- Re-run linter at the end and report remaining items.
 
-**`admin_audit_log`**
-- Keep `SELECT` admin-only; add explicit `INSERT/UPDATE/DELETE` policies that always evaluate `false` (defense in depth — only the SECURITY DEFINER `log_admin_action` writes).
-- Add `REVOKE ALL ON public.admin_audit_log FROM anon, authenticated` (only via RPCs/policies).
+Delivered as one migration: `supabase/migrations/<ts>_security_hardening_storage_and_definers.sql`.
 
-**`get_leaderboard_profiles`**
-- Currently `SECURITY DEFINER` returning all queried profiles. Tighten:
-  - `REVOKE EXECUTE … FROM anon`; `GRANT EXECUTE … TO authenticated`.
-  - Cap input array length (≤ 200) and return only `user_id, full_name` (already does).
-  - Add `SET search_path = public` (already set — verified).
-- Add a sibling `get_audit_admin_names(user_ids uuid[])` restricted to admins for the audit page so leaderboard RPC stays narrow.
+---
 
-**Linter pass** after migration; fix any new warnings.
+## 2. Playwright E2E for USSD state machine
 
-## 3. Server-side CSV export with strict auth + rate limit
+**Goal:** end-to-end coverage of the USSD flow against the deployed `ussd-handler` edge function (Africa's Talking POSTs `application/x-www-form-urlencoded`).
 
-New edge function `export-admin-audit-log`:
-- Validates `Authorization` header → derives caller's user via `auth.getUser(jwt)`.
-- Verifies `has_role(caller,'admin')`; otherwise 401/403 with structured `{ error: { code, message } }`.
-- Re-runs the same filter logic server-side using the service role key (does **not** trust client-supplied count or rows).
-- DB-backed throttle on `admin_audit_log`: 5 exports / 60 s and 30 / hour per admin; 100 / hour global, action `audit.export`. Returns 429 with `Retry-After`.
-- Streams CSV (`text/csv`) with proper escaping; writes one `audit.export` log row including filter JSON in metadata.
+New file: `e2e/ussd-flow.spec.ts`. Uses `request` fixture (no browser) to POST directly to the function URL with seeded data.
 
-Frontend:
-- `AuditLogTable.exportCsv` calls `supabase.functions.invoke('export-admin-audit-log', { body: filters })`, downloads the returned blob.
-- Surfaces throttled/forbidden errors via toast.
+Coverage:
+- Main menu rendering (`text=""` → `CON Welcome…`).
+- Shop list → product detail → quantity → add-to-cart (`1*1*1*2`) and assert session row in DB has expected `cart`.
+- View cart (`6`) shows subtotal; checkout (`6*1`) creates `orders` + `order_items` rows, triggers a `payments` row via `initiate-mpesa-payment`, returns `END Order … placed!`.
+- Buy-now path (`1*1*2*3`) for a registered phone.
+- Track order with valid 8-char prefix and too-short ID.
+- Eco-points for unregistered vs registered phone.
+- Tips (`4`) and Support (`5`) end with correct copy + `+254 700 116 655`.
+- M-Pesa confirmation: simulate the `mpesa-callback` POST and assert the order/payment status flips to `confirmed`/`success` (read via Supabase service role through a small helper in `e2e/helpers/seed.ts`).
 
-Tests: `supabase/functions/export-admin-audit-log/index.test.ts` covers: missing auth → 401, non-admin → 403, throttled → 429, success → CSV with header row.
+Seed helper additions:
+- `seedUssdProduct()`, `seedUserWithPhone(msisdn)`, `clearUssdSession(sessionId)`, `getOrderByPrefix(prefix)`, `simulateMpesaCallback(checkoutRequestId, success)`.
 
-## 4. Playwright E2E — Admin Audit Log
+Config:
+- Reuse existing `playwright.config.ts`. Add a `ussd` project (no browser) only if needed; otherwise default project is fine since we only use `request`.
 
-`e2e/admin-audit-log.spec.ts` (replace existing minimal spec):
-- Login via existing fixture, seed 3 audit rows by triggering newsletter resend + delete via UI.
-- Filter by action, by partial email, by multi-exact (toggle modes); assert result counts.
-- Click row → detail sheet visible with metadata JSON & target emails; close on Escape.
-- Click "Export filtered CSV" → assert `download` event, filename pattern, MIME type.
-- Trigger throttle (loop 6 exports) → expect destructive toast.
+---
 
-Also extend `e2e/newsletter-subscribers.spec.ts` to assert the audit log gains entries after each admin action.
+## 3. AuditLogTable unit tests
 
-## 5. USSD made fully functional
+New file: `src/components/admin/__tests__/AuditLogTable.test.tsx` (vitest + Testing Library, mirroring the existing `NewsletterSubscribersManager.test.tsx` pattern). Mocks `@/integrations/supabase/client` to control `rpc('search_audit_log', …)` and `functions.invoke('export-admin-audit-log')`.
 
-Issues today: cart only stores last product; "Buy Now" sends `orderId: "ussd-<sessionId>"` with no DB row, M-Pesa callback can't reconcile; phone normalization is loose; no quantity prompt.
+Cases:
+- **Contains mode (default):** types `alice` → calls `rpc` with `{ _email_query: 'alice', _mode: 'contains', _emails: null }`; renders rows.
+- **Mode toggle to multi-exact:** entering `a@x.com, b@y.com` produces two pills; rpc called with `_emails: ['a@x.com','b@y.com']`, `_mode: 'multi-exact'`, `_email_query: null`.
+- **Invalid email pill:** typing `not-an-email` shows inline error "Invalid email" and pill is not added; rpc is not re-fired.
+- **Empty multi-exact:** removing all pills → rpc called with `_emails: null`, falls back to unfiltered search.
+- **Pagination:** with `total_count > pageSize`, Next button enabled; clicking advances `_offset`; Prev disabled on first page; both disabled when `total_count <= pageSize`.
+- **Row click → detail sheet open** (assert sheet content `metadata` JSON renders).
+- **CSV export error toast** when `functions.invoke` returns 429 → assert "Rate limited" toast.
 
-Fixes (`supabase/functions/ussd-handler/index.ts` + new helper):
-- Normalize MSISDN via shared `normalizePhone()` (strip `+`, ensure `2547xxxxxxxx`).
-- Replace ad-hoc session_data with a proper cart array `{ product_id, qty, unit_price }[]` persisted on `ussd_sessions`.
-- Add menu states: list → detail → quantity prompt → add-to-cart vs checkout → confirm.
-- On checkout: create real `orders` + `order_items` rows for the matched profile (if found by phone) or guest stub; call `initiate-mpesa-payment` with the new `orderId`.
-- Order tracking: accept the short order prefix and look up via `ilike id::text || '%' = $1 || '%'`.
-- Update support contact text to use the official `+254 700 116 655`.
-- New tests `supabase/functions/ussd-handler/index.test.ts` — main menu, shop happy path, track-order branches, invalid input.
+---
 
-Also wire a tiny visual upgrade to `src/pages/Ussd.tsx` so the simulator shows live state per menu step using the new flow.
+## 4. Newsletter skeletons + secured wiring
 
-## 6. UI/UX polish + realistic imagery
+**Goal:** consistent loading UX in the newsletter admin surface and a public-facing skeleton during fetches.
 
-**Imagery (mix strategy)**
-- AI-generated (premium, Kenya-context): hero composting scene, USSD farmer using feature phone, education cover.
-- Curated Unsplash URLs (kept in `src/lib/stockImages.ts`): incidental product placeholders, blog/article fallbacks, testimonial avatars.
-- Replace clearly-placeholder images in: `HeroSection`, `FeaturesSection`, `HowItWorksSection`, `TestimonialsSection`, `Education` cards, `Ussd` page hero.
-- All new assets respect Captain Compost palette and use `loading="lazy"` + descriptive `alt`.
+New file: `src/components/admin/skeletons/NewsletterSubscribersSkeleton.tsx` — table-shaped skeleton (header row + 8 placeholder rows with checkbox/email/date/actions cells) using existing `Skeleton` primitive and design tokens.
 
-**UX polish**
-- Tighten landing rhythm: consistent section padding, increased contrast on CTAs, focus-visible rings.
-- Admin Audit Log: sticky table header, zebra rows, keyboard-navigable rows (`role="button"`, Enter to open sheet), visible filter chips.
-- Newsletter Manager: skeleton rows during load, empty-state illustration.
-- Respect framer-motion rule (`viewport={{ once: true, amount: 0 }}`).
+New file: `src/components/landing/NewsletterSignupSkeleton.tsx` — small inline skeleton for the footer/CTA newsletter form during hydration.
 
-## Technical changes & files
+Wiring:
+- `NewsletterSubscribersManager.tsx`: replace the current `<Loader2 />` (or naive null) loading branch with `<NewsletterSubscribersSkeleton />`. Keep all existing admin guards (`role !== 'admin'` redirect; queries already RLS-gated).
+- Footer/landing newsletter signup: render the lightweight skeleton until the component mounts (suspense or `useEffect` mount flag) — purely presentational, no data exposure.
+- Security checks confirmed unchanged: list/delete still admin-only via existing RLS; subscribe-from-public still allowed via `Anyone can subscribe` policy.
 
-**New**
-- `supabase/migrations/<ts>_audit_search_and_rls_hardening.sql` — `search_audit_log` RPC, `get_audit_admin_names` RPC, deny INSERT/UPDATE/DELETE policies, REVOKE/GRANTs.
-- `supabase/functions/export-admin-audit-log/index.ts` + `index.test.ts`.
-- `supabase/functions/ussd-handler/index.test.ts`.
-- `src/lib/stockImages.ts` — curated image map.
-- `src/assets/hero-compost.jpg`, `ussd-feature-phone.jpg`, `education-cover.jpg` (premium imagegen).
+Tests:
+- Extend `NewsletterSubscribersManager.test.tsx` with one case: while loading, the skeleton (testid `newsletter-subscribers-skeleton`) renders and the table is absent.
 
-**Edited**
-- `src/components/admin/AuditLogTable.tsx` — toggle filter, RPC calls, server-side export call, sticky header.
-- `src/components/admin/__tests__/AuditLogTable.test.tsx`.
-- `src/components/admin/NewsletterSubscribersManager.tsx` — skeletons, empty state.
-- `supabase/functions/ussd-handler/index.ts` — full state machine, real orders, phone normalization, official support number.
-- `src/pages/Ussd.tsx` — refreshed simulator, AI hero image.
-- `src/components/landing/{HeroSection,FeaturesSection,HowItWorksSection,TestimonialsSection}.tsx` — image swaps, spacing.
-- `e2e/admin-audit-log.spec.ts`, `e2e/newsletter-subscribers.spec.ts`.
-- `mem://features/admin/audit-log` updated to note new RPC + export edge function.
+---
 
-## Risks & mitigations
-- **RLS lockouts**: the linter is run after the migration; explicit GRANTs verified for `authenticated`.
-- **Large CSV**: edge function streams in 1 000-row chunks to stay under memory limits.
-- **USSD regressions**: Africa's Talking gateway can't be hit from CI, so logic is covered by Deno tests with mocked Supabase client.
-- **Image generation cost**: only 3 premium hero shots; everything else uses Unsplash URLs.
+## Files touched
+
+```text
+New
+  supabase/migrations/<ts>_security_hardening_storage_and_definers.sql
+  e2e/ussd-flow.spec.ts
+  src/components/admin/__tests__/AuditLogTable.test.tsx
+  src/components/admin/skeletons/NewsletterSubscribersSkeleton.tsx
+  src/components/landing/NewsletterSignupSkeleton.tsx
+
+Edited
+  e2e/helpers/seed.ts                               (USSD + mpesa helpers)
+  src/components/admin/NewsletterSubscribersManager.tsx   (skeleton wiring)
+  src/components/landing/Footer.tsx (or wherever signup lives)  (skeleton wiring)
+  src/components/admin/__tests__/NewsletterSubscribersManager.test.tsx
+  mem://tech/security/standards                     (note storage + EXECUTE hardening)
+```
+
+## Out of scope
+
+- No UI redesign of audit log or newsletter pages beyond skeletons.
+- No new edge functions; USSD/export functions already exist.
+- No migration to private buckets if linter doesn't flag them — only act on actual warnings.
+
+Approve and I'll implement in one pass, then run the linter + vitest + a `ussd-flow` dry run to verify.
