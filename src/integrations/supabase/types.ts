@@ -1008,6 +1008,18 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_ussd_session_detail: {
+        Args: { _session_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          is_active: boolean
+          menu_state: string
+          phone_number: string
+          session_data: Json
+          session_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1043,6 +1055,25 @@ export type Database = {
           metadata: Json
           target_count: number
           target_emails: string[]
+          total_count: number
+        }[]
+      }
+      search_ussd_sessions: {
+        Args: {
+          _active?: boolean
+          _limit?: number
+          _offset?: number
+          _q?: string
+          _state?: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          is_active: boolean
+          menu_state: string
+          phone_number: string
+          session_data: Json
+          session_id: string
           total_count: number
         }[]
       }
