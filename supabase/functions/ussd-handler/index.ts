@@ -26,11 +26,31 @@ export const normalizePhone = (raw: string): string => {
 };
 
 type CartItem = { product_id: string; qty: number; unit_price: number; name: string };
+type Transition = { from: string; to: string; at: string; input?: string };
 type SessionData = {
   products?: string[];
   product_id?: string;
   cart?: CartItem[];
+  transitions?: Transition[];
 };
+
+async function recordTransition(
+  db: ReturnType<typeof createClient>,
+  sessionId: string,
+  prev: SessionData | null,
+  prevState: string | null,
+  nextState: string,
+  input?: string,
+) {
+  const transitions = (prev?.transitions ?? []).slice(-49);
+  transitions.push({
+    from: prevState ?? "·",
+    to: nextState,
+    at: new Date().toISOString(),
+    input,
+  });
+  return transitions;
+}
 
 export async function handleUssd(input: {
   sessionId: string;
