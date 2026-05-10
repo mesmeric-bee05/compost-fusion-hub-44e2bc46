@@ -16,7 +16,7 @@ import ProductsManager from "@/components/admin/ProductsManager";
 import ContactSubmissionsManager from "@/components/admin/ContactSubmissionsManager";
 import NewsletterSubscribersManager from "@/components/admin/NewsletterSubscribersManager";
 import { Button } from "@/components/ui/button";
-import { Loader2, LayoutDashboard, ShoppingCart, ShoppingBag, Recycle, Users, Ticket, BarChart3, BookOpen, Package, MessageSquare, Mail, ShieldCheck } from "lucide-react";
+import { Loader2, LayoutDashboard, ShoppingCart, ShoppingBag, Recycle, Users, Ticket, BarChart3, BookOpen, Package, MessageSquare, Mail, ShieldCheck, Phone } from "lucide-react";
 
 const tabs = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -52,12 +52,20 @@ export default function AdminDashboard() {
       <div className="container py-8">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
           <h1 className="font-display text-3xl font-bold">Admin Dashboard</h1>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/admin/audit-log">
-              <ShieldCheck className="mr-2 h-4 w-4" />
-              Audit Log
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/admin/ussd-sessions">
+                <Phone className="mr-2 h-4 w-4" />
+                USSD Sessions
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/admin/audit-log">
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                Audit Log
+              </Link>
+            </Button>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2 mb-6">
           {tabs.map((t) => (

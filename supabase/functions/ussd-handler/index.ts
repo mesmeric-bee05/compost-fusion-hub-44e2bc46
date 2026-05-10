@@ -26,11 +26,31 @@ export const normalizePhone = (raw: string): string => {
 };
 
 type CartItem = { product_id: string; qty: number; unit_price: number; name: string };
+type Transition = { from: string; to: string; at: string; input?: string };
 type SessionData = {
   products?: string[];
   product_id?: string;
   cart?: CartItem[];
+  transitions?: Transition[];
 };
+
+async function recordTransition(
+  db: ReturnType<typeof createClient>,
+  sessionId: string,
+  prev: SessionData | null,
+  prevState: string | null,
+  nextState: string,
+  input?: string,
+) {
+  const transitions = (prev?.transitions ?? []).slice(-49);
+  transitions.push({
+    from: prevState ?? "·",
+    to: nextState,
+    at: new Date().toISOString(),
+    input,
+  });
+  return transitions;
+}
 
 export async function handleUssd(input: {
   sessionId: string;
@@ -70,12 +90,21 @@ export async function handleUssd(input: {
         .order("price", { ascending: true })
         .limit(5);
       if (!products?.length) return "END No products available. Check back soon.";
+      const { data: prevSession } = await db
+        .from("ussd_sessions")
+        .select("menu_state, session_data")
+        .eq("session_id", sessionId)
+        .maybeSingle();
+      const prevSd = (prevSession?.session_data as SessionData) ?? {};
+      const transitions = await recordTransition(
+        db, sessionId, prevSd, prevSession?.menu_state ?? "MAIN", "SHOP_LIST", text,
+      );
       await db.from("ussd_sessions").upsert(
         {
           session_id: sessionId,
           phone_number: msisdn,
           menu_state: "SHOP_LIST",
-          session_data: { products: products.map((p) => p.id) },
+          session_data: { ...prevSd, products: products.map((p) => p.id), transitions },
         },
         { onConflict: "session_id" },
       );
@@ -90,7 +119,7 @@ export async function handleUssd(input: {
     if (inputs.length === 2) {
       const { data: session } = await db
         .from("ussd_sessions")
-        .select("session_data")
+        .select("session_data, menu_state")
         .eq("session_id", sessionId)
         .single();
       const productIds = ((session?.session_data as SessionData) ?? {}).products ?? [];
@@ -103,10 +132,15 @@ export async function handleUssd(input: {
         .single();
       if (!product) return "END Product not found.";
 
+      const prevSd = (session?.session_data as SessionData) ?? {};
+      const transitions = await recordTransition(
+        db, sessionId, prevSd, session?.menu_state ?? "SHOP_LIST", "PRODUCT_DETAIL", text,
+      );
       const sd: SessionData = {
         products: productIds,
         product_id: product.id,
-        cart: ((session?.session_data as SessionData)?.cart) ?? [],
+        cart: prevSd.cart ?? [],
+        transitions,
       };
       await db
         .from("ussd_sessions")
