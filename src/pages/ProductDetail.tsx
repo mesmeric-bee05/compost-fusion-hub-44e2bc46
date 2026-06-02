@@ -1,13 +1,15 @@
 import { useParams, Link } from "react-router-dom";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
+import SEO from "@/components/SEO";
 import { useProduct } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
 import ProductReviews from "@/components/reviews/ProductReviews";
+import { productImageFor } from "@/lib/stockImages";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, ShoppingCart, ArrowLeft, Leaf } from "lucide-react";
+import { Loader2, ShoppingCart, ArrowLeft } from "lucide-react";
 
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -29,18 +31,45 @@ export default function ProductDetail() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title={`${product.name} — Captain Compost`}
+        description={(product.short_description || product.description || product.name).slice(0, 155)}
+        canonicalPath={`/products/${product.slug}`}
+        type="product"
+        image={product.image_url || productImageFor(product.category)}
+        jsonLd={{
+          "@context": "https://schema.org/",
+          "@type": "Product",
+          name: product.name,
+          description: product.short_description || product.description || "",
+          image: product.image_url || productImageFor(product.category),
+          category: product.category,
+          offers: {
+            "@type": "Offer",
+            priceCurrency: "KES",
+            price: product.price,
+            availability: product.stock_quantity > 0
+              ? "https://schema.org/InStock"
+              : "https://schema.org/OutOfStock",
+          },
+        }}
+      />
       <Navbar />
       <main className="container py-8">
         <Button variant="ghost" asChild className="mb-6">
-          <Link to="/products"><ArrowLeft className="mr-2 h-4 w-4" />Back to Products</Link>
+          <Link to="/products"><ArrowLeft className="mr-2 h-4 w-4" aria-hidden />Back to Products</Link>
         </Button>
         <div className="grid gap-8 lg:grid-cols-2">
           <div className="aspect-square overflow-hidden rounded-xl bg-muted">
-            {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full items-center justify-center"><Leaf className="h-20 w-20 text-muted-foreground/30" /></div>
-            )}
+            <img
+              src={product.image_url || productImageFor(product.category)}
+              alt={`${product.name} — Captain Compost`}
+              width={1200}
+              height={1200}
+              loading="eager"
+              decoding="async"
+              className="h-full w-full object-cover"
+            />
           </div>
           <div>
             <Badge variant="secondary" className="mb-2 uppercase">{product.category}</Badge>
