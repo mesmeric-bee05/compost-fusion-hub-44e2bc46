@@ -15,4 +15,18 @@ export const stockImages = {
   blog: {
     fallback: "https://images.unsplash.com/photo-1560493676-04071c5f467b?auto=format&fit=crop&w=1200&q=70",
   },
+  products: {
+    composters: "https://images.unsplash.com/photo-1593113646773-028c64a8f1b8?auto=format&fit=crop&w=800&q=70",
+    bins: "https://images.unsplash.com/photo-1605600659908-0ef719419d41?auto=format&fit=crop&w=800&q=70",
+    compost: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=800&q=70",
+    accessories: "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=800&q=70",
+    fallback: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=800&q=70",
+  },
 } as const;
+
+/** Returns a curated stock image for a product category, falling back gracefully. */
+export function productImageFor(category?: string | null): string {
+  const key = (category ?? "").toLowerCase();
+  if (key in stockImages.products) return stockImages.products[key as keyof typeof stockImages.products];
+  return stockImages.products.fallback;
+}

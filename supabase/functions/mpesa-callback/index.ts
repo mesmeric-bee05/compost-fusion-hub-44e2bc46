@@ -36,7 +36,8 @@ serve(async (req: Request): Promise<Response> => {
 
     const newStatus = ResultCode === 0 ? "completed" : "failed";
 
-    // Update payment record
+    // Idempotency guard: only update the payment row if it's still pending.
+    // A duplicate callback from Safaricom will match 0 rows and skip the order update path.
     const { data: payment, error: updateError } = await serviceClient
       .from("payments")
       .update({
@@ -46,11 +47,19 @@ serve(async (req: Request): Promise<Response> => {
         mpesa_receipt_number: mpesaReceiptNumber,
       })
       .eq("mpesa_checkout_request_id", CheckoutRequestID)
+      .eq("status", "pending")
       .select("order_id, user_id, phone_number, amount")
-      .single();
+      .maybeSingle();
 
     if (updateError) {
       console.error("Failed to update payment:", updateError.message);
+    }
+    if (!payment) {
+      console.log(`Callback for ${CheckoutRequestID} ignored (already processed or unknown)`);
+      return new Response(
+        JSON.stringify({ ResultCode: 0, ResultDesc: "Accepted" }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     // If payment successful, confirm order + trigger notifications

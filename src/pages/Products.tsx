@@ -4,6 +4,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import ProductCard from "@/components/products/ProductCard";
 import ProductFilters from "@/components/products/ProductFilters";
+import SEO from "@/components/SEO";
 import { useProducts } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
 import { useCompare } from "@/hooks/useCompare";
@@ -25,6 +26,11 @@ export default function Products() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Composters & Compost Products — Captain Compost Kenya"
+        description="Shop composters, bins, and finished compost in Kenya. KES pricing, M-Pesa checkout, nationwide delivery."
+        canonicalPath="/products"
+      />
       <Navbar />
       <main className="container py-8">
         <div className="mb-8">
