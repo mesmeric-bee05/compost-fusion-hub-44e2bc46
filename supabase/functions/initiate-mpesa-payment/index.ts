@@ -39,6 +39,19 @@ function formatPhone(phone: string): string {
   return cleaned;
 }
 
+// Simple in-memory rate limiter (per edge instance). 5 STK pushes / 10 min per user.
+const RATE_WINDOW_MS = 10 * 60 * 1000;
+const RATE_MAX = 5;
+const rateMap = new Map<string, number[]>();
+function rateLimitOk(userId: string): boolean {
+  const now = Date.now();
+  const hits = (rateMap.get(userId) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+  if (hits.length >= RATE_MAX) { rateMap.set(userId, hits); return false; }
+  hits.push(now);
+  rateMap.set(userId, hits);
+  return true;
+}
+
 serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
