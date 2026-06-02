@@ -73,6 +73,13 @@ serve(async (req: Request): Promise<Response> => {
     if (claimsError || !claimsData?.claims) throw new Error("Unauthorized");
     const userId = claimsData.claims.sub as string;
 
+    if (!rateLimitOk(userId)) {
+      return new Response(
+        JSON.stringify({ error: "Too many payment attempts. Please wait a few minutes." }),
+        { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const body: StkRequest = await req.json();
     const { orderId, phone, amount } = body;
     if (!orderId || !phone || !amount) throw new Error("Missing orderId, phone, or amount");
