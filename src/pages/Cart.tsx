@@ -165,6 +165,19 @@ export default function Cart() {
     }
 
     setPaymentMessage("Check your phone for the M-Pesa prompt. Enter your PIN to pay.");
+
+    // Fire-and-forget pending-payment email (idempotent server-side)
+    supabase.functions.invoke("send-order-status-email", {
+      body: {
+        orderId: order.id,
+        orderStatus: "payment_pending",
+        customerName: user.user_metadata?.full_name || user.email?.split("@")[0] || "Customer",
+        totalAmount: finalTotal,
+        deliveryAddress: address,
+        userId: user.id,
+      },
+    }).catch(() => { /* non-blocking */ });
+
     pollPaymentStatus(order.id);
   };
 

@@ -507,6 +507,30 @@ export type Database = {
         }
         Relationships: []
       }
+      order_email_log: {
+        Row: {
+          id: string
+          order_id: string
+          resend_id: string | null
+          sent_at: string
+          status: string
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          resend_id?: string | null
+          sent_at?: string
+          status: string
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          resend_id?: string | null
+          sent_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           id: string

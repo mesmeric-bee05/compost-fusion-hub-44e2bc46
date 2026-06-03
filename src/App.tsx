@@ -30,6 +30,7 @@ import Contact from "./pages/Contact";
 import Faq from "./pages/Faq";
 import Bundles from "./pages/Bundles";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import RoleRoute from "./components/auth/RoleRoute";
 import WhatsAppButton from "./components/WhatsAppButton";
 
 // Lazy-load heavy admin / driver bundles
@@ -72,10 +73,10 @@ const App = () => (
             <Route path="/faq" element={<Faq />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-            <Route path="/admin/audit-log" element={<ProtectedRoute><AdminAuditLog /></ProtectedRoute>} />
-            <Route path="/admin/ussd-sessions" element={<ProtectedRoute><AdminUssdSessions /></ProtectedRoute>} />
-            <Route path="/driver" element={<ProtectedRoute><DriverDashboard /></ProtectedRoute>} />
+            <Route path="/admin" element={<RoleRoute role="admin"><AdminDashboard /></RoleRoute>} />
+            <Route path="/admin/audit-log" element={<RoleRoute role="admin"><AdminAuditLog /></RoleRoute>} />
+            <Route path="/admin/ussd-sessions" element={<RoleRoute role="admin"><AdminUssdSessions /></RoleRoute>} />
+            <Route path="/driver" element={<RoleRoute role="driver"><DriverDashboard /></RoleRoute>} />
             <Route path="/orders/:orderId" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
             <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
             <Route path="/notification-preferences" element={<ProtectedRoute><NotificationPreferences /></ProtectedRoute>} />

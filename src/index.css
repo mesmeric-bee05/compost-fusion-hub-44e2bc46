@@ -105,4 +105,49 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Space Grotesk', sans-serif;
   }
+
+  :root {
+    --shadow-3d:
+      0 1px 0 0 hsl(var(--background) / 0.6) inset,
+      0 10px 25px -10px hsl(var(--primary) / 0.18),
+      0 4px 8px -4px hsl(var(--foreground) / 0.08);
+    --shadow-3d-hover:
+      0 1px 0 0 hsl(var(--background) / 0.8) inset,
+      0 20px 40px -12px hsl(var(--primary) / 0.28),
+      0 8px 16px -8px hsl(var(--foreground) / 0.14);
+    --gradient-surface: linear-gradient(180deg,
+      hsl(var(--card)) 0%,
+      hsl(var(--muted) / 0.4) 100%);
+    --gradient-primary-3d: linear-gradient(180deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--primary) / 0.85) 100%);
+  }
+}
+
+@layer components {
+  .card-3d {
+    background-image: var(--gradient-surface);
+    box-shadow: var(--shadow-3d);
+    transition: transform 220ms ease, box-shadow 220ms ease;
+  }
+  .card-3d:hover {
+    box-shadow: var(--shadow-3d-hover);
+    transform: translateY(-2px);
+  }
+  .btn-3d {
+    background-image: var(--gradient-primary-3d);
+    box-shadow:
+      0 1px 0 0 hsl(0 0% 100% / 0.18) inset,
+      0 6px 14px -6px hsl(var(--primary) / 0.55);
+    transition: transform 140ms ease, box-shadow 140ms ease;
+  }
+  .btn-3d:hover { transform: translateY(-1px); }
+  .btn-3d:active { transform: translateY(1px); box-shadow: 0 2px 6px -2px hsl(var(--primary) / 0.5); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-3d, .card-3d:hover, .btn-3d, .btn-3d:hover, .btn-3d:active {
+      transform: none;
+      transition: none;
+    }
+  }
 }

@@ -62,79 +62,74 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // If payment successful, confirm order + trigger notifications
-    if (ResultCode === 0 && payment?.order_id) {
-      // Get order details for notifications
-      const { data: order } = await serviceClient
-        .from("orders")
-        .select("id, total_amount, delivery_address, user_id")
-        .eq("id", payment.order_id)
-        .single();
+    // Get order + customer profile (for both success and failure paths)
+    const { data: order } = await serviceClient
+      .from("orders")
+      .select("id, total_amount, delivery_address, user_id")
+      .eq("id", payment.order_id)
+      .single();
 
-      // Update order status
+    const { data: profile } = await serviceClient
+      .from("profiles")
+      .select("full_name, phone")
+      .eq("user_id", payment.user_id)
+      .single();
+    const customerName = profile?.full_name || "Customer";
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const projectId = supabaseUrl.replace("https://", "").split(".")[0];
+    const serviceJwt = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (ResultCode === 0 && payment.order_id) {
+      // Success: confirm order
       const { error: orderError } = await serviceClient
-        .from("orders")
-        .update({ status: "confirmed" })
-        .eq("id", payment.order_id);
+        .from("orders").update({ status: "confirmed" }).eq("id", payment.order_id);
+      if (orderError) console.error("Failed to update order:", orderError.message);
+      else console.log(`Order ${payment.order_id} confirmed`);
 
-      if (orderError) {
-        console.error("Failed to update order:", orderError.message);
-      } else {
-        console.log(`Order ${payment.order_id} confirmed`);
-      }
-
-      // Get customer profile for notifications
-      const { data: profile } = await serviceClient
-        .from("profiles")
-        .select("full_name, phone")
-        .eq("user_id", payment.user_id)
-        .single();
-
-      const customerName = profile?.full_name || "Customer";
-
-      // Fire-and-forget: send email notification
+      // Email (idempotent, dedup key = orderId+payment_completed)
       try {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const projectId = supabaseUrl.replace("https://", "").split(".")[0];
-
         await fetch(`https://${projectId}.supabase.co/functions/v1/send-order-status-email`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-          },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceJwt}` },
           body: JSON.stringify({
             orderId: payment.order_id,
-            orderStatus: "confirmed",
+            orderStatus: "payment_completed",
             customerName,
             totalAmount: order?.total_amount || payment.amount,
             deliveryAddress: order?.delivery_address,
             userId: payment.user_id,
           }),
         });
-      } catch (e) {
-        console.error("Email notification failed:", e);
-      }
+      } catch (e) { console.error("Email notification failed:", e); }
 
-      // Fire-and-forget: send SMS notification
+      // SMS
       try {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const projectId = supabaseUrl.replace("https://", "").split(".")[0];
-
         await fetch(`https://${projectId}.supabase.co/functions/v1/send-sms-notification`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-          },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceJwt}` },
           body: JSON.stringify({
             phone: payment.phone_number,
-            message: `Hi ${customerName}, your Captain Compost order #${payment.order_id.slice(0, 8).toUpperCase()} of KES ${Math.ceil(payment.amount).toLocaleString()} has been confirmed! M-Pesa receipt: ${mpesaReceiptNumber}. We'll notify you when it ships. 🌿`,
+            message: `Hi ${customerName}, your Captain Compost order #${payment.order_id.slice(0, 8).toUpperCase()} of KES ${Math.ceil(payment.amount).toLocaleString()} has been confirmed! M-Pesa receipt: ${mpesaReceiptNumber}. 🌿`,
           }),
         });
-      } catch (e) {
-        console.error("SMS notification failed:", e);
-      }
+      } catch (e) { console.error("SMS notification failed:", e); }
+    } else if (payment.order_id) {
+      // Failure: notify user via email (idempotent)
+      try {
+        await fetch(`https://${projectId}.supabase.co/functions/v1/send-order-status-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceJwt}` },
+          body: JSON.stringify({
+            orderId: payment.order_id,
+            orderStatus: "payment_failed",
+            customerName,
+            totalAmount: order?.total_amount || payment.amount,
+            deliveryAddress: order?.delivery_address,
+            userId: payment.user_id,
+          }),
+        });
+      } catch (e) { console.error("Failure email failed:", e); }
     }
 
     return new Response(
