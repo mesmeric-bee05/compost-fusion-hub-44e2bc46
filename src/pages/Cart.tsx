@@ -181,7 +181,9 @@ export default function Cart() {
       },
     }).catch(() => { /* non-blocking */ });
 
-    pollPaymentStatus(order.id);
+    // Switch to "polling" state and hand off to realtime hook via activeOrderId.
+    setPaymentState("polling");
+    setActiveOrderId(order.id);
   };
 
   const removeCoupon = () => {
@@ -191,9 +193,10 @@ export default function Cart() {
   };
 
   const resetPayment = () => {
-    if (pollRef.current) clearInterval(pollRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setPaymentState("idle");
     setPaymentMessage("");
+    setActiveOrderId(null);
     orderIdRef.current = null;
   };
 
