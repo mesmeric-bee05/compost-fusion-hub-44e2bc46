@@ -6,6 +6,7 @@ import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useCheckBadges } from "@/hooks/useCheckBadges";
+import { usePaymentStatus } from "@/hooks/usePaymentStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,57 +32,59 @@ export default function Cart() {
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [paymentState, setPaymentState] = useState<PaymentState>("idle");
   const [paymentMessage, setPaymentMessage] = useState("");
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const orderIdRef = useRef<string | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Realtime + polling fallback for the active order's payment row.
+  const paymentSnapshot = usePaymentStatus(activeOrderId);
 
   const formatPrice = (p: number) =>
     new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(p);
 
-  // Cleanup polling on unmount
+  // React to realtime payment-state changes.
+  useEffect(() => {
+    if (!paymentSnapshot || !activeOrderId) return;
+    if (paymentSnapshot.status === "completed") {
+      setPaymentState("completed");
+      setPaymentMessage(`Payment confirmed! Receipt: ${paymentSnapshot.mpesa_receipt_number ?? "received"}`);
+      clearCart();
+      checkBadges();
+      toast({ title: "Payment successful! 🎉", description: "Your order has been confirmed." });
+      const oid = activeOrderId;
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => navigate(`/orders/${oid}`), 2500);
+    } else if (paymentSnapshot.status === "failed") {
+      setPaymentState("failed");
+      setPaymentMessage(paymentSnapshot.result_description || "Payment was not completed.");
+      toast({
+        title: "Payment failed",
+        description: paymentSnapshot.result_description || "Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [paymentSnapshot, activeOrderId, clearCart, checkBadges, navigate]);
+
+  // Hard timeout after 120s if Realtime never delivers a terminal state.
+  useEffect(() => {
+    if (paymentState !== "stk_sent" && paymentState !== "polling") return;
+    const t = setTimeout(() => {
+      setPaymentState((s) => {
+        if (s === "stk_sent" || s === "polling") {
+          setPaymentMessage("Payment timed out. Check your M-Pesa messages and contact support if debited.");
+          return "failed";
+        }
+        return s;
+      });
+    }, 120_000);
+    return () => clearTimeout(t);
+  }, [paymentState]);
+
   useEffect(() => {
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
-
-  const pollPaymentStatus = (orderId: string) => {
-    setPaymentState("polling");
-    let attempts = 0;
-    const maxAttempts = 30; // 60 seconds
-
-    pollRef.current = setInterval(async () => {
-      attempts++;
-      const { data } = await supabase
-        .from("payments")
-        .select("status, mpesa_receipt_number, result_description")
-        .eq("order_id", orderId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (data?.status === "completed") {
-        clearInterval(pollRef.current!);
-        pollRef.current = null;
-        setPaymentState("completed");
-        setPaymentMessage(`Payment confirmed! Receipt: ${data.mpesa_receipt_number}`);
-        clearCart();
-        checkBadges(); // Fire-and-forget badge check after successful order
-        toast({ title: "Payment successful! 🎉", description: "Your order has been confirmed." });
-        setTimeout(() => navigate("/dashboard"), 2500);
-      } else if (data?.status === "failed") {
-        clearInterval(pollRef.current!);
-        pollRef.current = null;
-        setPaymentState("failed");
-        setPaymentMessage(data.result_description || "Payment was not completed.");
-        toast({ title: "Payment failed", description: data.result_description || "Please try again.", variant: "destructive" });
-      } else if (attempts >= maxAttempts) {
-        clearInterval(pollRef.current!);
-        pollRef.current = null;
-        setPaymentState("failed");
-        setPaymentMessage("Payment timed out. Check your M-Pesa messages and contact support if debited.");
-      }
-    }, 2000);
-  };
 
   const applyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -178,7 +181,9 @@ export default function Cart() {
       },
     }).catch(() => { /* non-blocking */ });
 
-    pollPaymentStatus(order.id);
+    // Switch to "polling" state and hand off to realtime hook via activeOrderId.
+    setPaymentState("polling");
+    setActiveOrderId(order.id);
   };
 
   const removeCoupon = () => {
@@ -188,9 +193,10 @@ export default function Cart() {
   };
 
   const resetPayment = () => {
-    if (pollRef.current) clearInterval(pollRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setPaymentState("idle");
     setPaymentMessage("");
+    setActiveOrderId(null);
     orderIdRef.current = null;
   };
 

@@ -21,8 +21,13 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], storageState: undefined },
     },
     {
+      name: "driver-setup",
+      testMatch: /helpers\/driverAuth\.setup\.ts/,
+      use: { ...devices["Desktop Chrome"], storageState: undefined },
+    },
+    {
       name: "chromium",
-      dependencies: ["setup"],
+      dependencies: ["setup", "driver-setup"],
       use: { ...devices["Desktop Chrome"] },
     },
   ],

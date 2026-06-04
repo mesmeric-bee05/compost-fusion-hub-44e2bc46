@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, Package, CreditCard, Truck, CheckCircle2, XCircle, Clock, MapPin, Phone, ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import StatusTimeline from "@/components/orders/StatusTimeline";
+import { usePaymentStatus } from "@/hooks/usePaymentStatus";
 
 const ORDER_STEPS = ["pending", "confirmed", "shipped", "delivered"] as const;
 
@@ -85,6 +86,11 @@ export default function OrderTracking() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [orderId]);
+
+  // Realtime payment-row updates (overrides the cached payment status when newer)
+  const livePayment = usePaymentStatus(orderId ?? null);
+  const paymentStatus = livePayment?.status ?? payment?.status;
+  const paymentReceipt = livePayment?.mpesa_receipt_number ?? payment?.mpesa_receipt_number;
 
   const currentStatus = realtimeStatus || order?.status || "pending";
   const isCancelled = currentStatus === "cancelled";
@@ -230,14 +236,14 @@ export default function OrderTracking() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Status</span>
-                      <Badge variant={payment.status === "completed" ? "default" : "secondary"} className="capitalize">
-                        {payment.status}
+                      <Badge variant={paymentStatus === "completed" ? "default" : "secondary"} className="capitalize">
+                        {paymentStatus}
                       </Badge>
                     </div>
-                    {payment.mpesa_receipt_number && (
+                    {paymentReceipt && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Receipt</span>
-                        <span className="font-mono text-foreground">{payment.mpesa_receipt_number}</span>
+                        <span className="font-mono text-foreground">{paymentReceipt}</span>
                       </div>
                     )}
                     <div className="flex justify-between">

@@ -2,11 +2,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Truck, User } from "lucide-react";
+import { Truck, User, Mail, MoreHorizontal } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type OrderStatus = Database["public"]["Enums"]["order_status"];
@@ -136,6 +138,39 @@ export default function OrdersTable() {
     },
   });
 
+  // Resend payment status email (idempotent: clears order_email_log row first, then re-invokes)
+  const resendPaymentEmail = useMutation({
+    mutationFn: async ({ orderId, userId, totalAmount, deliveryAddress, status }: {
+      orderId: string; userId: string; totalAmount: number;
+      deliveryAddress: string | null; status: "payment_pending" | "payment_completed" | "payment_failed";
+    }) => {
+      // Clear the prior idempotency claim so the function will re-send
+      const { error: delErr } = await supabase.from("order_email_log")
+        .delete().eq("order_id", orderId).eq("status", status);
+      if (delErr) throw delErr;
+
+      const profile = profileMap.get(userId);
+      const customerName = profile?.full_name || "Valued Customer";
+      const { data, error } = await supabase.functions.invoke("send-order-status-email", {
+        body: { orderId, orderStatus: status, customerName, totalAmount, deliveryAddress, userId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      const skipped = (data as { skipped?: boolean } | null)?.skipped;
+      toast({
+        title: skipped ? "Email skipped" : "Email resent",
+        description: skipped
+          ? "No template matched or RESEND_API_KEY missing."
+          : "Payment status email has been resent.",
+      });
+    },
+    onError: (err) => {
+      toast({ title: "Resend failed", description: String(err), variant: "destructive" });
+    },
+  });
+
   if (isLoading) return <Skeleton className="h-64 w-full" />;
 
   return (
@@ -150,6 +185,7 @@ export default function OrdersTable() {
             <TableHead>Status</TableHead>
             <TableHead>Driver</TableHead>
             <TableHead>Update</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -211,12 +247,46 @@ export default function OrdersTable() {
                     </SelectContent>
                   </Select>
                 </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Order ${order.id.slice(0, 8)} actions`}
+                        disabled={resendPaymentEmail.isPending}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel className="flex items-center gap-2">
+                        <Mail className="h-3.5 w-3.5" /> Resend payment email
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {(["payment_pending", "payment_completed", "payment_failed"] as const).map((s) => (
+                        <DropdownMenuItem
+                          key={s}
+                          onClick={() => resendPaymentEmail.mutate({
+                            orderId: order.id,
+                            userId: order.user_id,
+                            totalAmount: Number(order.total_amount),
+                            deliveryAddress: order.delivery_address,
+                            status: s,
+                          })}
+                        >
+                          {s.replace("payment_", "").replace(/^\w/, (c) => c.toUpperCase())}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
               </TableRow>
             );
           })}
           {!orders?.length && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">No orders yet</TableCell>
+              <TableCell colSpan={8} className="text-center text-muted-foreground">No orders yet</TableCell>
             </TableRow>
           )}
         </TableBody>

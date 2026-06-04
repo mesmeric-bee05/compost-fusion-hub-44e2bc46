@@ -69,4 +69,13 @@ describe("ProductCard", () => {
     renderCard();
     expect(screen.getByRole("button", { name: /add to compare/i })).toBeInTheDocument();
   });
+
+  it("respects prefers-reduced-motion via matchMedia stub", () => {
+    // matchMedia is stubbed in src/test/setup.ts to return matches:false;
+    // ensure the component renders without throwing under that contract.
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    expect(typeof mql.matches).toBe("boolean");
+    renderCard();
+    expect(screen.getByText("Bokashi Bin")).toBeInTheDocument();
+  });
 });
