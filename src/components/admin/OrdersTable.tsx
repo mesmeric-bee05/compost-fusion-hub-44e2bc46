@@ -185,6 +185,7 @@ export default function OrdersTable() {
             <TableHead>Status</TableHead>
             <TableHead>Driver</TableHead>
             <TableHead>Update</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -246,12 +247,46 @@ export default function OrdersTable() {
                     </SelectContent>
                   </Select>
                 </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Order ${order.id.slice(0, 8)} actions`}
+                        disabled={resendPaymentEmail.isPending}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel className="flex items-center gap-2">
+                        <Mail className="h-3.5 w-3.5" /> Resend payment email
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {(["payment_pending", "payment_completed", "payment_failed"] as const).map((s) => (
+                        <DropdownMenuItem
+                          key={s}
+                          onClick={() => resendPaymentEmail.mutate({
+                            orderId: order.id,
+                            userId: order.user_id,
+                            totalAmount: Number(order.total_amount),
+                            deliveryAddress: order.delivery_address,
+                            status: s,
+                          })}
+                        >
+                          {s.replace("payment_", "").replace(/^\w/, (c) => c.toUpperCase())}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
               </TableRow>
             );
           })}
           {!orders?.length && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">No orders yet</TableCell>
+              <TableCell colSpan={8} className="text-center text-muted-foreground">No orders yet</TableCell>
             </TableRow>
           )}
         </TableBody>
