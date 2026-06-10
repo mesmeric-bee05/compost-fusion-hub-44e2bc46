@@ -650,6 +650,30 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_email_resend_attempts: {
+        Row: {
+          admin_id: string
+          attempted_at: string
+          id: string
+          order_id: string
+          status: string
+        }
+        Insert: {
+          admin_id: string
+          attempted_at?: string
+          id?: string
+          order_id: string
+          status: string
+        }
+        Update: {
+          admin_id?: string
+          attempted_at?: string
+          id?: string
+          order_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -1016,6 +1040,10 @@ export type Database = {
     Functions: {
       apply_coupon: {
         Args: { _code: string; _order_total: number }
+        Returns: Json
+      }
+      check_email_resend_rate: {
+        Args: { _order: string; _status: string }
         Returns: Json
       }
       get_audit_admin_names: {
