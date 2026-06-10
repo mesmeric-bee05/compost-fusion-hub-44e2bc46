@@ -23,6 +23,7 @@ const ACTIONS = [
   "newsletter.delete",
   "newsletter.bulk_delete",
   "audit.export",
+  "payment_email.resend",
 ] as const;
 type Action = (typeof ACTIONS)[number] | "all";
 type Mode = "contains" | "multi-exact";

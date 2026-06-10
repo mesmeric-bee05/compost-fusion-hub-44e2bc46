@@ -138,36 +138,54 @@ export default function OrdersTable() {
     },
   });
 
-  // Resend payment status email (idempotent: clears order_email_log row first, then re-invokes)
+  // Resend payment status email via the dedicated edge function (rate-limited + audited).
   const resendPaymentEmail = useMutation({
     mutationFn: async ({ orderId, userId, totalAmount, deliveryAddress, status }: {
       orderId: string; userId: string; totalAmount: number;
       deliveryAddress: string | null; status: "payment_pending" | "payment_completed" | "payment_failed";
     }) => {
-      // Clear the prior idempotency claim so the function will re-send
-      const { error: delErr } = await supabase.from("order_email_log")
-        .delete().eq("order_id", orderId).eq("status", status);
-      if (delErr) throw delErr;
-
       const profile = profileMap.get(userId);
       const customerName = profile?.full_name || "Valued Customer";
-      const { data, error } = await supabase.functions.invoke("send-order-status-email", {
-        body: { orderId, orderStatus: status, customerName, totalAmount, deliveryAddress, userId },
+      const { data, error } = await supabase.functions.invoke("resend-payment-status-email", {
+        body: { orderId, status, customerName, totalAmount, deliveryAddress, userId },
       });
-      if (error) throw error;
-      return data;
+      // supabase-js surfaces non-2xx as `error` with a `context.response` we can read.
+      if (error) {
+        const ctx = (error as { context?: { response?: Response } }).context;
+        if (ctx?.response) {
+          const body = await ctx.response.clone().json().catch(() => ({}));
+          if (ctx.response.status === 429) {
+            const wait = (body as { retry_after_seconds?: number }).retry_after_seconds ?? 30;
+            throw new Error(`RATE_LIMIT:${wait}`);
+          }
+          throw new Error((body as { error?: string }).error ?? error.message);
+        }
+        throw error;
+      }
+      return data as { result: "sent" | "skipped" | "failed"; skipped?: boolean };
     },
     onSuccess: (data) => {
-      const skipped = (data as { skipped?: boolean } | null)?.skipped;
+      const result = data?.result;
       toast({
-        title: skipped ? "Email skipped" : "Email resent",
-        description: skipped
-          ? "No template matched or RESEND_API_KEY missing."
-          : "Payment status email has been resent.",
+        title: result === "skipped" ? "Email skipped" : "Email resent",
+        description:
+          result === "skipped"
+            ? "Already sent or RESEND_API_KEY missing."
+            : "Payment status email has been resent and audited.",
       });
     },
-    onError: (err) => {
-      toast({ title: "Resend failed", description: String(err), variant: "destructive" });
+    onError: (err: Error) => {
+      const msg = err.message ?? String(err);
+      if (msg.startsWith("RATE_LIMIT:")) {
+        const wait = msg.split(":")[1];
+        toast({
+          title: "Rate limit reached",
+          description: `Too many resends. Try again in ${wait}s.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({ title: "Resend failed", description: msg, variant: "destructive" });
     },
   });
 
