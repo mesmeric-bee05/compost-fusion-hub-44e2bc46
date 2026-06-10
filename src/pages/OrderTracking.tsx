@@ -12,6 +12,8 @@ import { Loader2, Package, CreditCard, Truck, CheckCircle2, XCircle, Clock, MapP
 import { useEffect, useState } from "react";
 import StatusTimeline from "@/components/orders/StatusTimeline";
 import { usePaymentStatus } from "@/hooks/usePaymentStatus";
+import { useOrderPaymentToasts } from "@/hooks/useOrderPaymentToasts";
+import PaymentStatusBadge from "@/components/payments/PaymentStatusBadge";
 
 const ORDER_STEPS = ["pending", "confirmed", "shipped", "delivered"] as const;
 
@@ -88,9 +90,10 @@ export default function OrderTracking() {
   }, [orderId]);
 
   // Realtime payment-row updates (overrides the cached payment status when newer)
-  const livePayment = usePaymentStatus(orderId ?? null);
+  const { snapshot: livePayment, transport, reconnect } = usePaymentStatus(orderId ?? null);
   const paymentStatus = livePayment?.status ?? payment?.status;
   const paymentReceipt = livePayment?.mpesa_receipt_number ?? payment?.mpesa_receipt_number;
+  useOrderPaymentToasts(orderId ?? null, livePayment);
 
   const currentStatus = realtimeStatus || order?.status || "pending";
   const isCancelled = currentStatus === "cancelled";
@@ -226,7 +229,12 @@ export default function OrderTracking() {
           {/* Payment & Delivery Info */}
           <div className="space-y-6">
             <Card>
-              <CardHeader><CardTitle className="text-lg">Payment</CardTitle></CardHeader>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-lg">Payment</CardTitle>
+                  <PaymentStatusBadge transport={transport} onReconnect={reconnect} />
+                </div>
+              </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 {payment ? (
                   <>

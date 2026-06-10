@@ -14,6 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { Trash2, Plus, Minus, ShoppingBag, Loader2, Phone, CheckCircle2, XCircle, Clock, Ticket, X } from "lucide-react";
+import { useOrderPaymentToasts } from "@/hooks/useOrderPaymentToasts";
+import PaymentStatusBadge from "@/components/payments/PaymentStatusBadge";
 
 type PaymentState = "idle" | "creating_order" | "stk_sent" | "polling" | "completed" | "failed";
 
@@ -37,12 +39,13 @@ export default function Cart() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Realtime + polling fallback for the active order's payment row.
-  const paymentSnapshot = usePaymentStatus(activeOrderId);
+  const { snapshot: paymentSnapshot, transport, reconnect } = usePaymentStatus(activeOrderId);
+  useOrderPaymentToasts(activeOrderId, paymentSnapshot);
 
   const formatPrice = (p: number) =>
     new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(p);
 
-  // React to realtime payment-state changes.
+  // React to realtime payment-state changes (in-page UI; toasts handled by the hook above).
   useEffect(() => {
     if (!paymentSnapshot || !activeOrderId) return;
     if (paymentSnapshot.status === "completed") {
@@ -50,18 +53,12 @@ export default function Cart() {
       setPaymentMessage(`Payment confirmed! Receipt: ${paymentSnapshot.mpesa_receipt_number ?? "received"}`);
       clearCart();
       checkBadges();
-      toast({ title: "Payment successful! 🎉", description: "Your order has been confirmed." });
       const oid = activeOrderId;
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => navigate(`/orders/${oid}`), 2500);
     } else if (paymentSnapshot.status === "failed") {
       setPaymentState("failed");
       setPaymentMessage(paymentSnapshot.result_description || "Payment was not completed.");
-      toast({
-        title: "Payment failed",
-        description: paymentSnapshot.result_description || "Please try again.",
-        variant: "destructive",
-      });
     }
   }, [paymentSnapshot, activeOrderId, clearCart, checkBadges, navigate]);
 
@@ -348,6 +345,9 @@ export default function Cart() {
                       {paymentState === "completed" && "Payment confirmed!"}
                       {paymentState === "failed" && "Payment failed"}
                     </span>
+                    {activeOrderId && (paymentState === "stk_sent" || paymentState === "polling") && (
+                      <PaymentStatusBadge transport={transport} onReconnect={reconnect} className="ml-auto" />
+                    )}
                   </div>
                   {paymentMessage && <p className="text-xs leading-relaxed">{paymentMessage}</p>}
                 </div>
