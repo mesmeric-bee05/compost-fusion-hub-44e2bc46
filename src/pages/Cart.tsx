@@ -343,15 +343,11 @@ export default function Cart() {
                       {paymentState === "stk_sent" && "M-Pesa request sent"}
                       {paymentState === "polling" && "Waiting for payment…"}
                       {paymentState === "completed" && "Payment confirmed!"}
-                      {paymentState === "failed" && ""}
+                      {paymentState === "failed" && "Payment failed"}
                     </span>
                     {activeOrderId && (paymentState === "stk_sent" || paymentState === "polling") && (
                       <PaymentStatusBadge transport={transport} onReconnect={reconnect} className="ml-auto" />
                     )}
-                    <span className="hidden">{/* keep original label group below */}
-                      {paymentState === "completed" && "Payment confirmed!"}
-                      {paymentState === "failed" && "Payment failed"}
-                    </span>
                   </div>
                   {paymentMessage && <p className="text-xs leading-relaxed">{paymentMessage}</p>}
                 </div>

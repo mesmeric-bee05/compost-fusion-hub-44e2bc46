@@ -12,6 +12,8 @@ import { Loader2, Package, CreditCard, Truck, CheckCircle2, XCircle, Clock, MapP
 import { useEffect, useState } from "react";
 import StatusTimeline from "@/components/orders/StatusTimeline";
 import { usePaymentStatus } from "@/hooks/usePaymentStatus";
+import { useOrderPaymentToasts } from "@/hooks/useOrderPaymentToasts";
+import PaymentStatusBadge from "@/components/payments/PaymentStatusBadge";
 
 const ORDER_STEPS = ["pending", "confirmed", "shipped", "delivered"] as const;
 
@@ -88,7 +90,7 @@ export default function OrderTracking() {
   }, [orderId]);
 
   // Realtime payment-row updates (overrides the cached payment status when newer)
-  const livePayment = usePaymentStatus(orderId ?? null);
+  const { snapshot: livePayment, transport, reconnect } = usePaymentStatus(orderId ?? null);
   const paymentStatus = livePayment?.status ?? payment?.status;
   const paymentReceipt = livePayment?.mpesa_receipt_number ?? payment?.mpesa_receipt_number;
 
