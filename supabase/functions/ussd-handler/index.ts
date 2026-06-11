@@ -361,14 +361,17 @@ Track at captaincompost.co.ke 🌿`;
 // AT supports a shared secret via custom header (set in the AT dashboard).
 function ussdRequestAuthorized(req: Request): boolean {
   const expected = Deno.env.get("AT_CALLBACK_SECRET");
-  if (!expected) return true; // not yet configured; soft-allow (logged below)
+  if (!expected) {
+    // Secret not configured — reject all requests to fail-closed.
+    return false;
+  }
+  const url = new URL(req.url);
   const provided =
     req.headers.get("x-at-secret") ??
     req.headers.get("x-callback-secret") ??
-    new URL(req.url).searchParams.get("secret") ??
+    url.searchParams.get("secret") ??
     "";
   if (provided.length !== expected.length) return false;
-  // constant-time-ish comparison
   let diff = 0;
   for (let i = 0; i < expected.length; i++) {
     diff |= expected.charCodeAt(i) ^ provided.charCodeAt(i);
@@ -380,11 +383,8 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     if (!ussdRequestAuthorized(req)) {
-      console.warn("USSD request rejected: invalid AT callback secret");
+      console.warn("USSD request rejected: missing/invalid AT_CALLBACK_SECRET");
       return new Response("END Unauthorized", { status: 401, headers: corsHeaders });
-    }
-    if (!Deno.env.get("AT_CALLBACK_SECRET")) {
-      console.warn("AT_CALLBACK_SECRET not set — USSD endpoint is unauthenticated. Configure the secret in Africa's Talking and add it as AT_CALLBACK_SECRET to enforce.");
     }
 
     const formData = await req.formData();
