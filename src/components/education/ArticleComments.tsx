@@ -42,10 +42,8 @@ export default function ArticleComments({ contentId }: Props) {
       const userIds = [...new Set((data || []).map((c) => c.user_id))];
       if (!userIds.length) return [] as Comment[];
 
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, full_name")
-        .in("user_id", userIds);
+      const { data: profiles } = await supabase.rpc("get_public_profiles", { _user_ids: userIds });
+
 
       const profileMap = new Map(
         (profiles || []).map((p) => [p.user_id, p])

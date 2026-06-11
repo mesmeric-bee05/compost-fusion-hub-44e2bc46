@@ -114,47 +114,33 @@ export default function Cart() {
     setPaymentState("creating_order");
     setPaymentMessage("");
 
-    // 1. Create order
-    const { data: order, error } = await supabase.from("orders").insert({
-      user_id: user.id,
-      total_amount: finalTotal,
-      delivery_address: address,
-      delivery_phone: phone,
-      notes: notes || null,
-      coupon_code: couponResult ? couponCode.toUpperCase().trim() : null,
-      discount_amount: couponResult?.discount ?? 0,
-    }).select().single();
+    // 1. Create order via server-authoritative RPC (computes total from DB prices)
+    const { data: rpcData, error } = await supabase.rpc("create_order", {
+      _items: items.map(i => ({ product_id: i.product.id, quantity: i.quantity })),
+      _delivery_address: address,
+      _delivery_phone: phone,
+      _notes: notes || null,
+      _coupon_code: couponResult ? couponCode : null,
+    });
 
-    if (error || !order) {
+    if (error || !rpcData) {
       toast({ title: "Order failed", description: error?.message || "Unknown error", variant: "destructive" });
       setPaymentState("idle");
       return;
     }
 
-    orderIdRef.current = order.id;
+    const order = rpcData as { order_id: string; total_amount: number };
+    orderIdRef.current = order.order_id;
+    const authoritativeTotal = Number(order.total_amount);
 
-    // 2. Save order items
-    const orderItems = items.map(i => ({
-      order_id: order.id,
-      product_id: i.product.id,
-      quantity: i.quantity,
-      unit_price: i.product.price,
-      total_price: i.product.price * i.quantity,
-    }));
-    const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
-    if (itemsError) {
-      toast({ title: "Error saving items", description: itemsError.message, variant: "destructive" });
-      setPaymentState("idle");
-      return;
-    }
-
-    // 3. Initiate M-Pesa STK Push
+    // 2. Initiate M-Pesa STK Push (uses server total to avoid client tampering)
     setPaymentState("stk_sent");
     setPaymentMessage("Sending payment request to your phone…");
 
     const { data: stkData, error: stkError } = await supabase.functions.invoke("initiate-mpesa-payment", {
-      body: { orderId: order.id, phone, amount: finalTotal },
+      body: { orderId: order.order_id, phone, amount: authoritativeTotal },
     });
+
 
     if (stkError || stkData?.error) {
       const msg = stkData?.error || stkError?.message || "M-Pesa request failed";
@@ -169,10 +155,10 @@ export default function Cart() {
     // Fire-and-forget pending-payment email (idempotent server-side)
     supabase.functions.invoke("send-order-status-email", {
       body: {
-        orderId: order.id,
+        orderId: order.order_id,
         orderStatus: "payment_pending",
         customerName: user.user_metadata?.full_name || user.email?.split("@")[0] || "Customer",
-        totalAmount: finalTotal,
+        totalAmount: authoritativeTotal,
         deliveryAddress: address,
         userId: user.id,
       },
@@ -180,7 +166,8 @@ export default function Cart() {
 
     // Switch to "polling" state and hand off to realtime hook via activeOrderId.
     setPaymentState("polling");
-    setActiveOrderId(order.id);
+    setActiveOrderId(order.order_id);
+
   };
 
   const removeCoupon = () => {

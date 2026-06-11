@@ -90,7 +90,9 @@ export default function DriverDashboard() {
       // Trigger SMS notification
       const { data: order } = await supabase.from("orders").select("delivery_phone, total_amount, user_id").eq("id", id).single();
       if (order?.delivery_phone) {
-        const { data: profile } = await supabase.from("profiles").select("full_name").eq("user_id", order.user_id).single();
+        const { data: profiles } = await supabase.rpc("get_public_profiles", { _user_ids: [order.user_id] });
+        const profile = profiles?.[0];
+
         const name = profile?.full_name || "Customer";
         const msgs: Record<string, string> = {
           shipped: `Hi ${name}, your Captain Compost order #${id.slice(0, 8).toUpperCase()} is out for delivery! 🚚`,

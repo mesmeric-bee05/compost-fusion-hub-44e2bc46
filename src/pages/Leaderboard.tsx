@@ -33,10 +33,8 @@ export default function Leaderboard() {
 
       // Get profiles for names
       const userIds = rewards.map((r) => r.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, full_name")
-        .in("user_id", userIds);
+      const { data: profiles } = await supabase.rpc("get_public_profiles", { _user_ids: userIds });
+
 
       // Get badge counts
       const { data: badges } = await supabase

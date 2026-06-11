@@ -121,7 +121,13 @@ serve(async (req: Request): Promise<Response> => {
     const accessToken = await getMpesaAccessToken();
 
     const projectId = supabaseUrl.replace("https://", "").split(".")[0];
-    const callbackUrl = `https://${projectId}.supabase.co/functions/v1/mpesa-callback`;
+
+    // Per-transaction secret token — prevents an attacker who knows a
+    // CheckoutRequestID from forging a callback. The token is included as a
+    // path segment in the callback URL and validated by mpesa-callback.
+    const callbackToken = crypto.randomUUID().replace(/-/g, "") +
+      crypto.randomUUID().replace(/-/g, "");
+    const callbackUrl = `https://${projectId}.supabase.co/functions/v1/mpesa-callback/${callbackToken}`;
 
     const stkPayload = {
       BusinessShortCode: shortcode,
@@ -150,7 +156,10 @@ serve(async (req: Request): Promise<Response> => {
     );
 
     const stkData = await stkRes.json();
-    console.log("STK Push response:", JSON.stringify(stkData));
+    console.log("STK Push response:", JSON.stringify({
+      ResponseCode: stkData.ResponseCode,
+      ResponseDescription: stkData.ResponseDescription,
+    }));
 
     if (stkData.ResponseCode !== "0") {
       throw new Error(stkData.errorMessage || stkData.ResponseDescription || "STK Push failed");
@@ -164,18 +173,19 @@ serve(async (req: Request): Promise<Response> => {
       amount: Math.ceil(amount),
       mpesa_checkout_request_id: stkData.CheckoutRequestID,
       mpesa_merchant_request_id: stkData.MerchantRequestID,
+      callback_token: callbackToken,
       status: "pending",
     });
+
 
     if (insertError) throw new Error(`Failed to save payment: ${insertError.message}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        checkoutRequestId: stkData.CheckoutRequestID,
-        merchantRequestId: stkData.MerchantRequestID,
         message: "STK push sent. Check your phone.",
       }),
+
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: unknown) {

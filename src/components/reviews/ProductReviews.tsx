@@ -42,11 +42,9 @@ export default function ProductReviews({ productId }: Props) {
     queryKey: ["reviewer-profiles", reviewerIds],
     queryFn: async () => {
       if (!reviewerIds.length) return [];
-      const { data } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, avatar_url")
-        .in("user_id", reviewerIds);
+      const { data } = await supabase.rpc("get_public_profiles", { _user_ids: reviewerIds });
       return data ?? [];
+
     },
     enabled: reviewerIds.length > 0,
   });
