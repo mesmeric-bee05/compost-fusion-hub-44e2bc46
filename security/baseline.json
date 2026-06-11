@@ -1,0 +1,13 @@
+{
+  "generated_at": "2026-06-11T09:20:00Z",
+  "note": "Accepted findings after security hardening migration 2026-06-11. New errors are blocked; warnings above SEC_WARN_THRESHOLD also block.",
+  "findings": [
+    {
+      "id": "SUPA_authenticated_security_definer_function_executable",
+      "name": "Signed-In Users Can Execute SECURITY DEFINER Function",
+      "level": "warn",
+      "accepted": "Required for user-facing RPCs (apply_coupon, create_order, get_public_profiles, get_leaderboard_profiles, has_role, search_audit_log, search_ussd_sessions, get_ussd_session_detail). Internal callers were revoked in migration 2026-06-11.",
+      "occurrences": 8
+    }
+  ]
+}

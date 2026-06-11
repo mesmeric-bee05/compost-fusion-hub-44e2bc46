@@ -1,0 +1,72 @@
+name: Security Scan Gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v1
+        with: { bun-version: latest }
+
+      # --- Wiz IaC scan ---
+      - name: Wiz CLI scan
+        id: wiz
+        if: ${{ secrets.WIZ_CLIENT_ID != '' }}
+        env:
+          WIZ_CLIENT_ID: ${{ secrets.WIZ_CLIENT_ID }}
+          WIZ_CLIENT_SECRET: ${{ secrets.WIZ_CLIENT_SECRET }}
+        run: |
+          curl -sLo wizcli https://wizcli.app.wiz.io/latest/wizcli-linux-amd64
+          chmod +x wizcli
+          ./wizcli auth --id "$WIZ_CLIENT_ID" --secret "$WIZ_CLIENT_SECRET"
+          ./wizcli iac scan --path . --format sarif --output wiz.sarif || true
+
+      - name: Upload Wiz SARIF
+        if: ${{ hashFiles('wiz.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v3
+        with: { sarif_file: wiz.sarif }
+
+      # --- Lovable / Supabase security scan ---
+      - name: Lovable security scan
+        env:
+          LOVABLE_API_KEY: ${{ secrets.LOVABLE_API_KEY }}
+          LOVABLE_PROJECT_ID: ${{ secrets.LOVABLE_PROJECT_ID }}
+        run: bun scripts/run-supabase-scan.mjs > scan.json
+
+      - name: Compare against baseline
+        id: gate
+        env:
+          SEC_WARN_THRESHOLD: ${{ vars.SEC_WARN_THRESHOLD || 2 }}
+        run: bun scripts/compare-findings.mjs security/baseline.json scan.json
+
+      - name: PR summary
+        if: always()
+        run: |
+          {
+            echo "## Security Scan"
+            echo ""
+            echo "- Wiz dashboard: https://app.wiz.io"
+            echo "- Lovable scan artifact: scan.json"
+            echo "- Threshold (new warnings): \`$SEC_WARN_THRESHOLD\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload scan artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan
+          path: |
+            scan.json
+            wiz.sarif
