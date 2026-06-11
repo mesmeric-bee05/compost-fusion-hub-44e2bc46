@@ -7,8 +7,22 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Per-transaction callback token from URL path: /mpesa-callback/<token>
+    const url = new URL(req.url);
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    const callbackToken = pathParts[pathParts.length - 1] || "";
+    // A valid token is 64 hex chars (two stripped UUIDs). Reject anything else
+    // — including a legacy callback URL with no token suffix.
+    const tokenValid = /^[a-f0-9]{32,128}$/i.test(callbackToken) && callbackToken !== "mpesa-callback";
+    if (!tokenValid) {
+      console.warn("M-Pesa callback rejected: missing/invalid token");
+      return new Response(JSON.stringify({ ResultCode: 1, ResultDesc: "Invalid token" }), {
+        status: 200, headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json();
-    console.log("M-Pesa callback received:", JSON.stringify(body));
+    console.log("M-Pesa callback received (token ok)");
 
     const stkCallback = body?.Body?.stkCallback;
     if (!stkCallback) {
@@ -36,8 +50,9 @@ serve(async (req: Request): Promise<Response> => {
 
     const newStatus = ResultCode === 0 ? "completed" : "failed";
 
-    // Idempotency guard: only update the payment row if it's still pending.
-    // A duplicate callback from Safaricom will match 0 rows and skip the order update path.
+    // Idempotency + token check: row must match BOTH the CheckoutRequestID AND
+    // the per-transaction callback_token, and still be pending. Forged
+    // callbacks without the secret token can't pass this gate.
     const { data: payment, error: updateError } = await serviceClient
       .from("payments")
       .update({
@@ -47,9 +62,11 @@ serve(async (req: Request): Promise<Response> => {
         mpesa_receipt_number: mpesaReceiptNumber,
       })
       .eq("mpesa_checkout_request_id", CheckoutRequestID)
+      .eq("callback_token", callbackToken)
       .eq("status", "pending")
       .select("order_id, user_id, phone_number, amount")
       .maybeSingle();
+
 
     if (updateError) {
       console.error("Failed to update payment:", updateError.message);
