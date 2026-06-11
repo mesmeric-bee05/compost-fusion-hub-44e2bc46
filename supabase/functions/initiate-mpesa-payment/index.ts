@@ -183,10 +183,9 @@ serve(async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({
         success: true,
-        checkoutRequestId: stkData.CheckoutRequestID,
-        merchantRequestId: stkData.MerchantRequestID,
         message: "STK push sent. Check your phone.",
       }),
+
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: unknown) {
