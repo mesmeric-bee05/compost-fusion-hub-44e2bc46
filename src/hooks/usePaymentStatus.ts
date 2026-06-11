@@ -54,7 +54,7 @@ export function usePaymentStatus(orderId: string | null | undefined): PaymentSta
 
     const fetchOnce = async () => {
       const { data } = await supabase
-        .from("payments")
+        .from("payments_safe" as never)
         .select("status, mpesa_receipt_number, result_description")
         .eq("order_id", orderId)
         .order("created_at", { ascending: false })
