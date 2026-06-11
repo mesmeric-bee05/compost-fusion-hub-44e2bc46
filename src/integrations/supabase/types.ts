@@ -677,6 +677,7 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          callback_token: string | null
           created_at: string
           id: string
           mpesa_checkout_request_id: string | null
@@ -692,6 +693,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          callback_token?: string | null
           created_at?: string
           id?: string
           mpesa_checkout_request_id?: string | null
@@ -707,6 +709,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          callback_token?: string | null
           created_at?: string
           id?: string
           mpesa_checkout_request_id?: string | null
@@ -1046,6 +1049,16 @@ export type Database = {
         Args: { _order: string; _status: string }
         Returns: Json
       }
+      create_order: {
+        Args: {
+          _coupon_code?: string
+          _delivery_address: string
+          _delivery_phone: string
+          _items: Json
+          _notes?: string
+        }
+        Returns: Json
+      }
       get_audit_admin_names: {
         Args: { user_ids: string[] }
         Returns: {
@@ -1056,6 +1069,14 @@ export type Database = {
       get_leaderboard_profiles: {
         Args: { user_ids: string[] }
         Returns: {
+          full_name: string
+          user_id: string
+        }[]
+      }
+      get_public_profiles: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          avatar_url: string
           full_name: string
           user_id: string
         }[]
