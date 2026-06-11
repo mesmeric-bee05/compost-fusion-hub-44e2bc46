@@ -230,7 +230,7 @@ serve(async (req: Request): Promise<Response> => {
       .from("orders").select("discount_amount").eq("id", orderId).single();
 
     const trackingUrl = `https://compost-fusion-hub.lovable.app/orders/${orderId}`;
-    const html = buildEmailHtml(body, info, items, trackingUrl,
+    const html = buildEmailHtml(trustedBody, info, items, trackingUrl,
       payment?.mpesa_receipt_number || null, orderData?.discount_amount || 0);
 
     const emailRes = await fetch("https://api.resend.com/emails", {
