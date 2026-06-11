@@ -1,51 +1,89 @@
-# Plan: Payment Realtime UX + Email Resend Hardening + Audit Trail
+# Security, Realtime, USSD/M-Pesa hardening + checkout fix
 
-## 1. Real-time payment status toasts
+## 1. Re-run scan results (current findings)
 
-- Extend `src/hooks/usePaymentStatus.ts` to expose `{ snapshot, previousStatus, transport: "realtime" | "polling" | "connecting" | "disconnected" }`.
-- New hook `useOrderPaymentToasts(orderId)` watches snapshot transitions and emits sonner toasts only on change:
-  - `pending → completed`: success toast "Payment completed — order confirmed".
-  - `pending → failed`: error toast with `result_description`, action button "Retry payment" linking to `/cart`.
-  - First `pending` observation: info toast "Awaiting M-Pesa confirmation…".
-- Wire the hook into `src/pages/Cart.tsx` and `src/pages/OrderTracking.tsx` so toasts fire wherever the user is, without duplicating logic.
-- Unit test the transition logic in `src/hooks/__tests__/useOrderPaymentToasts.test.tsx` using `vi.mock("sonner")`.
+Connector scan (Wiz / connector_security_scan): **0 items**. Supabase scans returned **14 items**:
 
-## 2. Resend rate limiting for payment-status emails
+| # | Severity | Source | Issue | Location |
+|---|----------|--------|-------|----------|
+| 1 | error | supabase_lov | `payments.callback_token` readable by owner via "Users can view own payments" RLS — owner could forge a callback | `public.payments`, mpesa-callback |
+| 2 | warn | supabase_lov | No RLS on `realtime.messages` — any authenticated user can subscribe to another user's order/payment/notification topic | `realtime.messages` |
+| 3 | warn | supabase_lov | `ussd_sessions` writer surface — verify only service role writes | `public.ussd_sessions` |
+| 4–14 | warn | supabase | 11× "Signed-in users can EXECUTE SECURITY DEFINER function" | `public.*` RPCs |
 
-- New table `payment_email_resend_attempts(order_id, status, admin_id, attempted_at)` + index, with RLS allowing admin SELECT/INSERT and service_role full access.
-- New `public.check_email_resend_rate(_order uuid, _status text)` security-definer function returning `{ allowed, retry_after_seconds, attempts_in_window }`. Rule: max **3 resends per (order,status) per 60 minutes**, and a 30-second cooldown between attempts.
-- Edge function `resend-payment-status-email` (new): validates admin via JWT + `has_role`, calls the rate-limit RPC, on `allowed=false` returns `429` with `{ retry_after_seconds }`; on allowed: deletes the `order_email_log` row, invokes `send-order-status-email`, logs an attempt + writes to `admin_audit_log` via `log_admin_action` ("payment_email.resend").
-- Update `src/components/admin/OrdersTable.tsx` resend mutation to call this new function (instead of doing the delete client-side) and surface a specific toast on 429 ("Rate limit reached — try again in Xs"), plus inline disabled state on the menu item while cooldown is active.
-- E2E `e2e/payment-email-resend-rate-limit.spec.ts`: as admin, trigger 4 resends in a row for one order/status, assert the 4th surfaces the rate-limit UI message and the audit-log records exactly 3 successful entries.
-- Deno test for the new edge function covering: missing auth → 401, non-admin → 403, cooldown hit → 429, success path → 200.
+## 2. Fixes (mapped 1:1)
 
-## 3. Realtime disconnected fallback indicator
+### A. Migration: hide `callback_token`, tighten Realtime, lock SECURITY DEFINER execute
+- Drop "Users can view own payments" policy. Replace with a column-restricted policy via a **`public.payments_safe` view** (excludes `callback_token`, `mpesa_merchant_request_id`) and grant SELECT on the view to `authenticated`. Update `src/hooks/usePaymentStatus.ts` + admin reads to use the view.
+- `REVOKE EXECUTE ... FROM authenticated` on RPCs that must never be user-callable: `log_admin_action`, `increment_coupon_usage` (trigger-only), `record_order_status_change`, `record_order_initial_status`, `notify_*` (all triggers), `create_notification_preferences`, `handle_new_user`, `decrement_stock_on_confirm`, `update_updated_at_column`, `get_audit_admin_names` (admin-only via RPC wrapper kept), `check_email_resend_rate` (called by edge function via service role only).
+- Keep `EXECUTE` for: `apply_coupon`, `create_order`, `get_public_profiles`, `get_leaderboard_profiles`, `has_role`, `search_audit_log`, `search_ussd_sessions`, `get_ussd_session_detail` (already admin-gated internally).
+- Add a trigger on `ussd_sessions` that blocks INSERT/UPDATE from non-service roles (defence in depth).
 
-- `usePaymentStatus` already polls on `CHANNEL_ERROR | TIMED_OUT`; expand to also flip `transport` to `"polling"` and re-attempt subscribe every 30s. When subscribed, flip back to `"realtime"`.
-- New `<PaymentStatusBadge transport=… />` shown on Cart pending state and OrderTracking header:
-  - `realtime`: subtle green dot + "Live updates".
-  - `polling`: amber dot + "Live updates unavailable — checking every 4s".
-  - `disconnected`: red dot + retry button that calls a `reconnect()` returned by the hook.
-- Unit tests for the hook simulating subscribe success, `CHANNEL_ERROR`, and timer-driven polling using `vi.useFakeTimers()` and a mocked `supabase.channel`.
-- Playwright `e2e/realtime-fallback.spec.ts`: monkey-patch `window.WebSocket` before navigation to force connection failure; assert the amber polling badge appears and that a payment row update is still reflected (via direct DB insert through service role helper) within ~5s.
+### B. Migration: RLS on `realtime.messages`
+```sql
+alter table realtime.messages enable row level security;
 
-## 4. Admin audit trail for email resends
+-- Allow a user to subscribe ONLY to topics scoped to their own uuid.
+create policy "users subscribe to own topics"
+  on realtime.messages for select to authenticated
+  using (
+    -- topic patterns we publish: payment-<orderId>-*, order-<orderId>, notifications-<userId>
+    -- match any topic whose suffix maps to a row owned by auth.uid()
+    exists (
+      select 1 from public.orders o
+      where realtime.topic() like 'payment-' || o.id::text || '%'
+         or realtime.topic() = 'order-' || o.id::text
+      and o.user_id = auth.uid()
+    )
+    or realtime.topic() = 'notifications-' || auth.uid()::text
+    or public.has_role(auth.uid(), 'admin')
+  );
+```
+Rename current channel names in `usePaymentStatus.ts`, `OrderTracking.tsx`, `useNotifications.ts` to match these stable topic patterns. Add **pgTAP-style SQL tests** in a new `supabase/tests/realtime_rls.test.sql` plus a Vitest integration test using two auth clients (user A cannot subscribe to user B's order channel).
 
-- Reuse `admin_audit_log`. The new edge function writes one entry per attempt with action `payment_email.resend` and metadata `{ order_id, status, template, resend_id, result: "sent" | "rate_limited" | "failed", error? }`.
-- Extend `src/components/admin/AuditLogTable.tsx` filter dropdown to include `payment_email.resend`.
-- New panel `src/components/admin/PaymentEmailResendHistory.tsx` rendered on the order detail drawer (and as a tab on `/admin/audit-log` filtered view): table with columns Admin, When, Template/Status, Result, Resend ID; fetched via `search_audit_log` RPC filtered by action and metadata `order_id`.
-- Backfill: small migration adds an index on `admin_audit_log((metadata->>'order_id'))` for fast per-order lookup.
-- E2E `e2e/admin-payment-email-audit.spec.ts`: trigger a resend as admin, navigate to `/admin/audit-log`, filter by `payment_email.resend`, assert the new row shows admin email, template (`payment_completed`), and result `sent`; open the detail sheet and assert metadata JSON contains `order_id` and `resend_id`.
+### C. AT_CALLBACK_SECRET configuration
+- Trigger the `add_secret` flow for `AT_CALLBACK_SECRET` (random 48-char value provided by user).
+- Update `ussd-handler` to **require** the secret (remove soft-allow path) and accept it via header `X-AT-Secret` OR query `?secret=…`.
+- Document in `README.md` and a new `docs/africastalking-setup.md`: in AT dashboard → USSD → Callback URL, append `?secret=<value>` (AT does not allow custom headers on USSD callbacks, so query param is the supported path) and the function enforces constant-time comparison.
+- Add Deno test `ussd-handler/auth.test.ts` covering: missing secret → 401, wrong length → 401, correct secret → 200.
 
-## 5. Continued hardening pass
+### D. CI gate for security scans
+- Add `.github/workflows/security-scan.yml`:
+  - Runs on PR + main.
+  - Calls Wiz CLI (`wiz-cli iac scan --policy default --tag repo=$REPO`) and uploads SARIF.
+  - Calls a new script `scripts/run-supabase-scan.mjs` that hits the Lovable scan endpoint via `LOVABLE_API_KEY` secret and emits JSON.
+  - `scripts/compare-findings.mjs` diffs against `security/baseline.json`; fails the job when `new_errors > 0` or `new_warnings > THRESHOLD` (default 2, configurable via repo var `SEC_WARN_THRESHOLD`).
+  - Job summary includes deep links to Wiz dashboard and the uploaded artifact.
+- Commit initial `security/baseline.json` from current scan (0 errors after fixes; warnings tracked).
 
-- `supabase--linter` after migrations; resolve any new findings on the two new tables/indexes.
-- Add `<SEO>` to any pages missing it surfaced during this pass (spot-check `AdminAuditLog`, `DriverDashboard`, `OrderTracking`).
-- Ensure all new toasts respect `prefers-reduced-motion` (sonner default is fine; just verify no custom animation classes regress).
-- Vitest + Playwright must be green before closing.
+### E. Consolidated report
+- Generate `/mnt/documents/security-report-v1.pdf` (via Python+reportlab) listing every finding, severity, fix, migration filename, and verification step. Surface with `<presentation-artifact>`.
 
-## Files
+## 3. Checkout fix — "M-Pesa Edge Function returned non-2xx"
 
-**New**: `src/hooks/useOrderPaymentToasts.ts`, `src/hooks/__tests__/useOrderPaymentToasts.test.tsx`, `src/hooks/__tests__/usePaymentStatus.test.tsx`, `src/components/payments/PaymentStatusBadge.tsx`, `src/components/admin/PaymentEmailResendHistory.tsx`, `supabase/functions/resend-payment-status-email/index.ts` + `index.test.ts`, `e2e/payment-email-resend-rate-limit.spec.ts`, `e2e/realtime-fallback.spec.ts`, `e2e/admin-payment-email-audit.spec.ts`, migration for `payment_email_resend_attempts` + `check_email_resend_rate` + audit index.
+Edge logs show `initiate-mpesa-payment error: Invalid Access Token`. Root cause: function hardcodes `https://api.safaricom.co.ke` (production) but credentials in the project are sandbox keys.
 
-**Edited**: `src/hooks/usePaymentStatus.ts`, `src/pages/Cart.tsx`, `src/pages/OrderTracking.tsx`, `src/components/admin/OrdersTable.tsx`, `src/components/admin/AuditLogTable.tsx`, `src/pages/AdminAuditLog.tsx`.
+- Add `MPESA_ENV` secret (`sandbox` | `production`, default `sandbox`).
+- Switch base URL: `sandbox.safaricom.co.ke` vs `api.safaricom.co.ke`.
+- Surface a clearer error to the UI when M-Pesa returns 401 ("M-Pesa credentials rejected — verify environment & shortcode").
+- Add `e2e/checkout-mpesa-sandbox.spec.ts` that mocks STK push and verifies happy path + receipt callback.
+
+## 4. USSD end-to-end verification
+- Patch `createOrderAndPay` to call `create_order` RPC (server-authoritative pricing) instead of raw insert — closes a price-manipulation gap and matches web checkout.
+- Re-run `e2e/ussd-to-mpesa.spec.ts`.
+
+## 5. Files touched
+
+**New:** migration `2026XXXX_security_hardening.sql`, `supabase/tests/realtime_rls.test.sql`, `supabase/functions/ussd-handler/auth.test.ts`, `.github/workflows/security-scan.yml`, `scripts/run-supabase-scan.mjs`, `scripts/compare-findings.mjs`, `security/baseline.json`, `docs/africastalking-setup.md`, `e2e/checkout-mpesa-sandbox.spec.ts`, `e2e/realtime-topic-isolation.spec.ts`.
+
+**Edited:** `supabase/functions/initiate-mpesa-payment/index.ts`, `supabase/functions/ussd-handler/index.ts`, `supabase/functions/mpesa-callback/index.ts`, `src/hooks/usePaymentStatus.ts`, `src/hooks/useNotifications.ts`, `src/pages/OrderTracking.tsx`, `src/pages/Cart.tsx` (error mapping), `README.md`.
+
+**Secrets:** request `AT_CALLBACK_SECRET`, `MPESA_ENV`.
+
+## 6. Verification checklist
+- `supabase--linter` → 0 errors.
+- `security--run_security_scan` → 0 errors, only intentional warns with `update_memory` entries.
+- Playwright: checkout, USSD, realtime fallback, topic isolation green.
+- Manual: place test order in sandbox → STK push delivered → callback updates `payments.status=completed` → toast + redirect.
+
+Approve to implement.
