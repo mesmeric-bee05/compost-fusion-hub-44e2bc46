@@ -1038,7 +1038,59 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      payments_safe: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          id: string | null
+          mpesa_checkout_request_id: string | null
+          mpesa_receipt_number: string | null
+          order_id: string | null
+          phone_number: string | null
+          result_code: number | null
+          result_description: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          id?: string | null
+          mpesa_checkout_request_id?: string | null
+          mpesa_receipt_number?: string | null
+          order_id?: string | null
+          phone_number?: string | null
+          result_code?: number | null
+          result_description?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          id?: string | null
+          mpesa_checkout_request_id?: string | null
+          mpesa_receipt_number?: string | null
+          order_id?: string | null
+          phone_number?: string | null
+          result_code?: number | null
+          result_description?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       apply_coupon: {
