@@ -111,8 +111,41 @@ serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // AUTH: require either service-role bearer or an admin user JWT.
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    if (!bearer) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401, headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+    const isService = bearer === SERVICE_KEY;
+    if (!isService) {
+      const userClient = createClient(SUPABASE_URL, SUPABASE_ANON, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(bearer);
+      if (claimsErr || !claimsData?.claims?.sub) {
+        return new Response(JSON.stringify({ error: "unauthorized" }), {
+          status: 401, headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+      const adminCheck = createClient(SUPABASE_URL, SERVICE_KEY);
+      const { data: isAdmin } = await adminCheck.rpc("has_role", {
+        _user_id: claimsData.claims.sub, _role: "admin",
+      });
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: "forbidden" }), {
+          status: 403, headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
+
     const body: OrderStatusEmailRequest = await req.json();
-    const { orderId, orderStatus, customerName, totalAmount, deliveryAddress, userId } = body;
+    const { orderId, orderStatus, totalAmount, deliveryAddress, userId } = body;
 
     if (!orderId || !orderStatus || !userId) {
       return new Response(JSON.stringify({ error: "Missing orderId, orderStatus, or userId" }), {
@@ -129,10 +162,14 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    const adminClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const adminClient = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    // Look up trusted customer name server-side; never trust client-supplied value.
+    const { data: profileRow } = await adminClient
+      .from("profiles").select("full_name").eq("user_id", userId).maybeSingle();
+    const customerName = profileRow?.full_name?.trim() || "Valued Customer";
+    const trustedBody = { orderId, orderStatus, customerName, totalAmount, deliveryAddress, userId };
+
 
     // Idempotency: claim the (order, status) row first; if it already exists, skip.
     const { error: claimError } = await adminClient
