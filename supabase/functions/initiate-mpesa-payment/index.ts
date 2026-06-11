@@ -7,7 +7,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MPESA_BASE_URL = "https://api.safaricom.co.ke";
+const MPESA_ENV = (Deno.env.get("MPESA_ENV") ?? "sandbox").toLowerCase();
+const MPESA_BASE_URL = MPESA_ENV === "production"
+  ? "https://api.safaricom.co.ke"
+  : "https://sandbox.safaricom.co.ke";
 
 interface StkRequest {
   orderId: string;
@@ -26,7 +29,12 @@ async function getMpesaAccessToken(): Promise<string> {
     { headers: { Authorization: `Basic ${credentials}` } }
   );
   const data = await res.json();
-  if (!data.access_token) throw new Error("Failed to get M-Pesa access token");
+  if (!data.access_token) {
+    console.error("M-Pesa OAuth failed", { env: MPESA_ENV, status: res.status, body: data });
+    throw new Error(
+      `M-Pesa credentials rejected (${MPESA_ENV}). Verify MPESA_CONSUMER_KEY/SECRET match the MPESA_ENV environment.`,
+    );
+  }
   return data.access_token;
 }
 
