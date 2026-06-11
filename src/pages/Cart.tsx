@@ -155,10 +155,10 @@ export default function Cart() {
     // Fire-and-forget pending-payment email (idempotent server-side)
     supabase.functions.invoke("send-order-status-email", {
       body: {
-        orderId: order.id,
+        orderId: order.order_id,
         orderStatus: "payment_pending",
         customerName: user.user_metadata?.full_name || user.email?.split("@")[0] || "Customer",
-        totalAmount: finalTotal,
+        totalAmount: authoritativeTotal,
         deliveryAddress: address,
         userId: user.id,
       },
@@ -166,7 +166,8 @@ export default function Cart() {
 
     // Switch to "polling" state and hand off to realtime hook via activeOrderId.
     setPaymentState("polling");
-    setActiveOrderId(order.id);
+    setActiveOrderId(order.order_id);
+
   };
 
   const removeCoupon = () => {
