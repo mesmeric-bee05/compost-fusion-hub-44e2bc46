@@ -1,13 +1,12 @@
 /// Prisma schema for Captain Compost
 /// Generated based on Supabase schema from migrations
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
 }
 
 // Enums
@@ -70,14 +69,17 @@ model Profile {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  userRoles     UserRole[]
-  rewards       Rewards?
-  impactMetrics ImpactMetric[]
-  forumPosts    ForumPost[]
-  productReviews ProductReview[]
-  wishlist      Wishlist[]
-  orders        Order[]
-  collectionRequests CollectionRequest[]
+  userRoles     UserRole[] @relation("userRoles")
+  rewards       Rewards? @relation("rewards")
+  impactMetrics ImpactMetric[] @relation("impactMetrics")
+  forumPosts    ForumPost[] @relation("forumPosts")
+  productReviews ProductReview[] @relation("productReviews")
+  wishlist      Wishlist[] @relation("wishlist")
+  orders        Order[] @relation("orders")
+  collectionRequests CollectionRequest[] @relation("collectionRequests")
+  assignedCollections CollectionRequest[] @relation("assignedCollections")
+  authoredContent Content[] @relation("content")
+  forumComments ForumComment[] @relation("forumComments")
 
   @@index([userId])
 }
@@ -88,7 +90,7 @@ model UserRole {
   role    AppRole
 
   // Relations
-  user Profile @relation(fields: [userId], references: [userId])
+  user Profile @relation("userRoles", fields: [userId], references: [id])
 
   @@unique([userId, role])
   @@index([userId])
@@ -104,8 +106,8 @@ model Product {
   price         Float    @default(0)
   currency      String   @default("KES")
   imageUrl      String?
-  gallery       String[] @default[]
-  specifications Json     @default({})
+  gallery       Json     // Storing as JSON array instead of String[]
+  specifications Json
   stockQuantity Int      @default(0)
   isActive      Boolean  @default(true)
   bulkDiscountPercent Float @default(0)
@@ -113,9 +115,9 @@ model Product {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  orderItems    OrderItem[]
-  productReviews ProductReview[]
-  wishlist      Wishlist[]
+  orderItems    OrderItem[] @relation("orderItems")
+  productReviews ProductReview[] @relation("productReviews")
+  wishlist      Wishlist[] @relation("wishlist")
 
   @@index([slug])
   @@index([isActive])
@@ -133,9 +135,9 @@ model Order {
   updatedAt       DateTime @updatedAt
 
   // Relations
-  user       Profile @relation(fields: [userId], references: [userId])
-  orderItems OrderItem[]
-  payments   Payment[]
+  user       Profile @relation("orders", fields: [userId], references: [userId])
+  orderItems OrderItem[] @relation("orderItems")
+  payments   Payment[] @relation("payments")
 
   @@index([userId])
   @@index([status])
@@ -150,8 +152,8 @@ model OrderItem {
   totalPrice Float  @default(0)
 
   // Relations
-  order    Order @relation(fields: [orderId], references: [id])
-  product  Product @relation(fields: [productId], references: [id])
+  order    Order @relation("orderItems", fields: [orderId], references: [id])
+  product  Product @relation("orderItems", fields: [productId], references: [id])
 
   @@index([orderId])
   @@index([productId])
@@ -169,7 +171,7 @@ model Payment {
   updatedAt       DateTime @updatedAt
 
   // Relations
-  order Order @relation(fields: [orderId], references: [id])
+  order Order @relation("payments", fields: [orderId], references: [id])
 
   @@index([orderId])
   @@index([mpesaRequestId])
@@ -193,8 +195,8 @@ model CollectionRequest {
   updatedAt       DateTime @updatedAt
 
   // Relations
-  user    Profile @relation(fields: [userId], references: [userId])
-  driver? Profile @relation(fields: [driverId], references: [id])
+  user    Profile @relation("collectionRequests", fields: [userId], references: [id])
+  driver  Profile? @relation("assignedCollections", fields: [driverId], references: [id])
 
   @@index([userId])
   @@index([driverId])
@@ -217,7 +219,7 @@ model Content {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  author Profile? @relation(fields: [authorId], references: [userId])
+  author Profile? @relation("content", fields: [authorId], references: [id])
 
   @@index([slug])
   @@index([isPublished])
@@ -233,7 +235,7 @@ model ImpactMetric {
   recordedAt   DateTime @default(now())
 
   // Relations
-  user Profile @relation(fields: [userId], references: [userId])
+  user Profile @relation("impactMetrics", fields: [userId], references: [id])
 
   @@index([userId])
   @@index([recordedAt])
@@ -244,11 +246,11 @@ model Rewards {
   userId  String   @unique
   points  Int      @default(0)
   level   String   @default("beginner")
-  badges  String[] @default{}
+  badges  Json     // Storing as JSON array instead of String[]
   updatedAt DateTime @updatedAt
 
   // Relations
-  user Profile @relation(fields: [userId], references: [userId])
+  user Profile @relation("rewards", fields: [userId], references: [userId])
 
   @@index([userId])
 }
@@ -264,8 +266,8 @@ model ForumPost {
   updatedAt DateTime @updatedAt
 
   // Relations
-  user Profile @relation(fields: [userId], references: [userId])
-  comments ForumComment[]
+  user Profile @relation("forumPosts", fields: [userId], references: [id])
+  comments ForumComment[] @relation("forumComments")
 
   @@index([userId])
   @@index([isPinned])
@@ -282,8 +284,8 @@ model ForumComment {
   createdAt DateTime @default(now())
 
   // Relations
-  post    ForumPost @relation(fields: [postId], references: [id])
-  user    Profile   @relation(fields: [userId], references: [userId])
+  post    ForumPost @relation("forumComments", fields: [postId], references: [id])
+  user    Profile   @relation("forumComments", fields: [userId], references: [id])
 
   @@index([postId])
   @@index([userId])
@@ -294,17 +296,20 @@ model ProductReview {
   id        String   @id @default(cuid())
   productId String
   userId    String
-  rating    Int      @check("rating >= 1 AND rating <= 5")
+  rating    Int
   comment   String?
   createdAt DateTime @default(now())
 
   // Relations
-  product Product @relation(fields: [productId], references: [id])
-  user    Profile @relation(fields: [userId], references: [userId])
+  product Product @relation("productReviews", fields: [productId], references: [id])
+  user    Profile @relation("productReviews", fields: [userId], references: [userId])
 
   @@index([productId])
   @@index([userId])
   @@index([createdAt])
+
+  // Note: Rating validation (1-5) should be handled in application layer
+  // or via database triggers/check constraints
 }
 
 model Wishlist {
@@ -314,21 +319,10 @@ model Wishlist {
   createdAt DateTime @default(now())
 
   // Relations
-  user    Profile @relation(fields: [userId], references: [userId])
-  product Product @relation(fields: [productId], references: [id])
+  user    Profile @relation("wishlist", fields: [userId], references: [id])
+  product Product @relation("wishlist", fields: [productId], references: [id])
 
   @@unique([userId, productId])
   @@index([userId])
   @@index([productId])
 }
-
-// For storing JSON data (specification, etc.)
-type Json {
-  // This is a placeholder - PostgreSQL jsonb type
-  // In practice, you'd use Json from @prisma/client
-  // For now we'll use Json as a generic type
-}
-
-// Helper type for JSON fields
-// In actual implementation with PostgreSQL, you'd use:
-// specifications Json @db.Jsonb
