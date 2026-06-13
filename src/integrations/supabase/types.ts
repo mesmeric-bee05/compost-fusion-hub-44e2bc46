@@ -44,6 +44,24 @@ export type Database = {
         }
         Relationships: []
       }
+      api_rate_limits: {
+        Row: {
+          bucket_key: string
+          hit_at: string
+          id: number
+        }
+        Insert: {
+          bucket_key: string
+          hit_at?: string
+          id?: number
+        }
+        Update: {
+          bucket_key?: string
+          hit_at?: string
+          id?: number
+        }
+        Relationships: []
+      }
       article_bookmarks: {
         Row: {
           content_id: string
@@ -1099,6 +1117,14 @@ export type Database = {
       }
       check_email_resend_rate: {
         Args: { _order: string; _status: string }
+        Returns: Json
+      }
+      check_rate_limit: {
+        Args: {
+          _bucket_key: string
+          _max_hits: number
+          _window_seconds: number
+        }
         Returns: Json
       }
       create_order: {

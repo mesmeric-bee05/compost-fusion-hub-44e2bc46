@@ -1,8 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { enforceRateLimit, clientIp } from "../_shared/rate-limit.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseKey);
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -387,7 +389,16 @@ Deno.serve(async (req: Request) => {
       return new Response("END Unauthorized", { status: 401, headers: corsHeaders });
     }
 
+    // Per-IP rate limit: USSD is high-frequency but a single phone session is
+    // bounded by AT's 120s timeout — 200 hits/min protects against abuse from
+    // forged callbacks that pass the shared-secret check.
+    const rl = await enforceRateLimit(supabase, `ussd:ip:${clientIp(req)}`, 60, 200);
+    if (!rl.allowed) {
+      return new Response("END Service busy. Try again shortly.", { status: 429, headers: corsHeaders });
+    }
+
     const formData = await req.formData();
+
     const sessionId = formData.get("sessionId") as string;
     const phoneNumber = formData.get("phoneNumber") as string;
     const text = (formData.get("text") as string) || "";

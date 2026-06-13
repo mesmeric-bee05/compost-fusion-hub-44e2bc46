@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { enforceRateLimit, rateLimitResponse, clientIp } from "../_shared/rate-limit.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -81,12 +83,22 @@ serve(async (req: Request): Promise<Response> => {
     if (claimsError || !claimsData?.claims) throw new Error("Unauthorized");
     const userId = claimsData.claims.sub as string;
 
+    const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Per-user (5/10min) and per-IP (20/10min) persistent rate limits.
+    const ip = clientIp(req);
+    const userRl = await enforceRateLimit(serviceClient, `mpesa-stk:user:${userId}`, 600, 5);
+    if (!userRl.allowed) return rateLimitResponse(userRl, corsHeaders);
+    const ipRl = await enforceRateLimit(serviceClient, `mpesa-stk:ip:${ip}`, 600, 20);
+    if (!ipRl.allowed) return rateLimitResponse(ipRl, corsHeaders);
+
     if (!rateLimitOk(userId)) {
       return new Response(
         JSON.stringify({ error: "Too many payment attempts. Please wait a few minutes." }),
         { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
 
     const body: StkRequest = await req.json();
     const { orderId, phone, amount } = body;
@@ -101,9 +113,8 @@ serve(async (req: Request): Promise<Response> => {
     const timestamp = new Date().toISOString().replace(/[-T:.Z]/g, "").slice(0, 14);
     const password = btoa(`${shortcode}${passkey}${timestamp}`);
 
-    const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-
     // Verify the order belongs to the user and is pending
+
     const { data: order, error: orderErr } = await serviceClient
       .from("orders")
       .select("id, user_id, status, total_amount")
