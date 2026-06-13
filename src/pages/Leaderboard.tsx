@@ -36,15 +36,14 @@ export default function Leaderboard() {
       const { data: profiles } = await supabase.rpc("get_public_profiles", { _user_ids: userIds });
 
 
-      // Get badge counts
-      const { data: badges } = await supabase
-        .from("user_badges")
-        .select("user_id")
-        .in("user_id", userIds);
+      // Get badge counts via RPC (user_badges no longer publicly readable)
+      const { data: badges } = await supabase.rpc("get_leaderboard_badge_counts", {
+        _user_ids: userIds,
+      });
 
       const badgeCounts: Record<string, number> = {};
-      badges?.forEach((b) => {
-        badgeCounts[b.user_id] = (badgeCounts[b.user_id] || 0) + 1;
+      badges?.forEach((b: { user_id: string; badge_count: number }) => {
+        badgeCounts[b.user_id] = Number(b.badge_count) || 0;
       });
 
       const profileMap: Record<string, string> = {};

@@ -1118,6 +1118,13 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_leaderboard_badge_counts: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          badge_count: number
+          user_id: string
+        }[]
+      }
       get_leaderboard_profiles: {
         Args: { user_ids: string[] }
         Returns: {
