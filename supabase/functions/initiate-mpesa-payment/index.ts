@@ -83,12 +83,22 @@ serve(async (req: Request): Promise<Response> => {
     if (claimsError || !claimsData?.claims) throw new Error("Unauthorized");
     const userId = claimsData.claims.sub as string;
 
+    const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Per-user (5/10min) and per-IP (20/10min) persistent rate limits.
+    const ip = clientIp(req);
+    const userRl = await enforceRateLimit(serviceClient, `mpesa-stk:user:${userId}`, 600, 5);
+    if (!userRl.allowed) return rateLimitResponse(userRl, corsHeaders);
+    const ipRl = await enforceRateLimit(serviceClient, `mpesa-stk:ip:${ip}`, 600, 20);
+    if (!ipRl.allowed) return rateLimitResponse(ipRl, corsHeaders);
+
     if (!rateLimitOk(userId)) {
       return new Response(
         JSON.stringify({ error: "Too many payment attempts. Please wait a few minutes." }),
         { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
 
     const body: StkRequest = await req.json();
     const { orderId, phone, amount } = body;
