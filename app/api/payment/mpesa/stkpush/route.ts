@@ -1,34 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mpesaClient } from '@/lib/mpesa';
+import { z } from 'zod';
+
+// Define validation schema for STK push request
+const stkPushSchema = z.object({
+  phoneNumber: z.string().regex(/^(\+254|0)?[1-9][0-9]{8}$/, 'Invalid phone number format'),
+  amount: z.number().positive('Amount must be a positive number'),
+  accountReference: z.string().min(1, 'Account reference is required'),
+  transactionDesc: z.string().optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const { phoneNumber, amount, accountReference, transactionDesc } = await request.json();
+    const body = await request.json();
 
-    // Validate input
-    if (!phoneNumber || !amount || !accountReference) {
+    // Validate input using Zod
+    const validationResult = stkPushSchema.safeParse(body);
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'Missing required fields: phoneNumber, amount, accountReference' },
+        { error: 'Validation failed', details: validationResult.error.format() },
         { status: 400 }
       );
     }
 
-    // Validate amount is positive number
-    if (typeof amount !== 'number' || amount <= 0) {
-      return NextResponse.json(
-        { error: 'Amount must be a positive number' },
-        { status: 400 }
-      );
-    }
-
-    // Validate phone number format (basic validation)
-    const phoneRegex = /^(\+254|0)?[1-9][0-9]{8}$/;
-    if (!phoneRegex.match(phoneNumber)) {
-      return NextResponse.json(
-        { error: 'Invalid phone number format' },
-        { status: 400 }
-      );
-    }
+    const { phoneNumber, amount, accountReference, transactionDesc } = validationResult.data;
 
     // Initiate STK push
     const result = await mpesaClient.initiateStkPush(
