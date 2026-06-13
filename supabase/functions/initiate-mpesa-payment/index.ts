@@ -113,9 +113,8 @@ serve(async (req: Request): Promise<Response> => {
     const timestamp = new Date().toISOString().replace(/[-T:.Z]/g, "").slice(0, 14);
     const password = btoa(`${shortcode}${passkey}${timestamp}`);
 
-    const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-
     // Verify the order belongs to the user and is pending
+
     const { data: order, error: orderErr } = await serviceClient
       .from("orders")
       .select("id, user_id, status, total_amount")
