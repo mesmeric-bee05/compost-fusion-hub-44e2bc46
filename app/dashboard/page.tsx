@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { redirect } from "next/navigation"
+import { useUSSDInfo } from "@/lib/hooks/ussdInfo"
 
 export default async function Dashboard() {
   const session = await getServerSession(authOptions)
@@ -8,6 +9,8 @@ export default async function Dashboard() {
   if (!session) {
     redirect("/auth/signin")
   }
+
+  const { ussdCode, instructions } = useUSSDInfo()
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -33,6 +36,35 @@ export default async function Dashboard() {
             This is your dashboard where you can manage your composting services,
             view your impact, and schedule waste collections.
           </p>
+        </section>
+
+        {/* USSD Information Section */}
+        <section className="bg-white rounded-xl shadow-sm p-6">
+          <h2 className="text-xl font-semibold mb-4">USSD Service</h2>
+          <div className="space-y-4">
+            <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
+              <h3 className="font-semibold mb-2">Access Captain Compost via USSD</h3>
+              <p className="font-mono text-lg">
+                {ussdCode}
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Dial this code on any mobile phone to access our services
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="font-semibold">Available Services</h3>
+              <ol className="list-decimal list-inside space-y-1 text-sm">
+                {instructions.slice(2).map((instruction, index) => (
+                  <li key={index}>{instruction}</li>
+                ))}
+              </ol>
+            </div>
+
+            <p className="text-xs text-muted-foreground mt-4">
+              USSD service works on all mobile phones - no smartphone or internet connection required
+            </p>
+          </div>
         </section>
 
         {/* Placeholder for future features */}
