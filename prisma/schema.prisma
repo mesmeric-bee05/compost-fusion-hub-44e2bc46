@@ -1,0 +1,334 @@
+/// Prisma schema for Captain Compost
+/// Generated based on Supabase schema from migrations
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum AppRole {
+  INDIVIDUAL
+  FARMER
+  INSTITUTION
+  RECYCLER
+  DRIVER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum WasteType {
+  ORGANIC
+  RECYCLABLE
+  AGRICULTURAL
+  MIXED
+}
+
+enum CollectionStatus {
+  REQUESTED
+  SCHEDULED
+  COLLECTED
+  CANCELLED
+}
+
+enum ScheduleFrequency {
+  ONE_TIME
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+enum ContentType {
+  ARTICLE
+  VIDEO
+  GUIDE
+  COURSE
+}
+
+// Models
+model Profile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  fullName      String   @default("")
+  phone         String?
+  avatarUrl     String?
+  location      String?
+  bio           String?
+  language      String   @default("en")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  userRoles     UserRole[]
+  rewards       Rewards?
+  impactMetrics ImpactMetric[]
+  forumPosts    ForumPost[]
+  productReviews ProductReview[]
+  wishlist      Wishlist[]
+  orders        Order[]
+  collectionRequests CollectionRequest[]
+
+  @@index([userId])
+}
+
+model UserRole {
+  id      String @id @default(cuid())
+  userId  String
+  role    AppRole
+
+  // Relations
+  user Profile @relation(fields: [userId], references: [userId])
+
+  @@unique([userId, role])
+  @@index([userId])
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  description   String?
+  shortDescription String?
+  category      String   @default("composters")
+  price         Float    @default(0)
+  currency      String   @default("KES")
+  imageUrl      String?
+  gallery       String[] @default[]
+  specifications Json     @default({})
+  stockQuantity Int      @default(0)
+  isActive      Boolean  @default(true)
+  bulkDiscountPercent Float @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  orderItems    OrderItem[]
+  productReviews ProductReview[]
+  wishlist      Wishlist[]
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  userId          String
+  status          OrderStatus @default(PENDING)
+  totalAmount     Float   @default(0)
+  deliveryAddress String?
+  deliveryPhone   String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user       Profile @relation(fields: [userId], references: [userId])
+  orderItems OrderItem[]
+  payments   Payment[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int      @default(1)
+  unitPrice Float    @default(0)
+  totalPrice Float  @default(0)
+
+  // Relations
+  order    Order @relation(fields: [orderId], references: [id])
+  product  Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id              String   @id @default(cuid())
+  orderId         String
+  mpesaRequestId  String?
+  mpesaReceiptNo  String?
+  amount          Float
+  status          String   // PENDING, PAID, FAILED
+  confirmedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@index([mpesaRequestId])
+  @@index([status])
+}
+
+model CollectionRequest {
+  id              String   @id @default(cuid())
+  userId          String
+  driverId        String?
+  wasteType       WasteType @default(ORGANIC)
+  estimatedVolumeKg Float   @default(0)
+  address         String
+  pickupDate      DateTime
+  pickupTime      String?
+  frequency       ScheduleFrequency @default(ONE_TIME)
+  status          CollectionStatus @default(REQUESTED)
+  verificationPhotoUrl String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user    Profile @relation(fields: [userId], references: [userId])
+  driver? Profile @relation(fields: [driverId], references: [id])
+
+  @@index([userId])
+  @@index([driverId])
+  @@index([status])
+}
+
+model Content {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  body        String?
+  category    String   @default("composting")
+  contentType ContentType @default(ARTICLE)
+  imageUrl    String?
+  videoUrl    String?
+  language    String   @default("en")
+  isPublished Boolean  @default(false)
+  authorId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  author Profile? @relation(fields: [authorId], references: [userId])
+
+  @@index([slug])
+  @@index([isPublished])
+}
+
+model ImpactMetric {
+  id           String   @id @default(cuid())
+  userId       String
+  wasteDivertedKg Float   @default(0)
+  co2SavedKg   Float   @default(0)
+  compostProducedKg Float @default(0)
+  treesEquivalent Float  @default(0)
+  recordedAt   DateTime @default(now())
+
+  // Relations
+  user Profile @relation(fields: [userId], references: [userId])
+
+  @@index([userId])
+  @@index([recordedAt])
+}
+
+model Rewards {
+  id      String   @id @default(cuid())
+  userId  String   @unique
+  points  Int      @default(0)
+  level   String   @default("beginner")
+  badges  String[] @default{}
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user Profile @relation(fields: [userId], references: [userId])
+
+  @@index([userId])
+}
+
+model ForumPost {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  category  String   @default("general")
+  isPinned  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user Profile @relation(fields: [userId], references: [userId])
+  comments ForumComment[]
+
+  @@index([userId])
+  @@index([isPinned])
+  @@index([createdAt])
+}
+
+model ForumComment {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  body      String
+  isHelpful Boolean  @default(false)
+  parentId  String? // for nested comments (max 2 levels)
+  createdAt DateTime @default(now())
+
+  // Relations
+  post    ForumPost @relation(fields: [postId], references: [id])
+  user    Profile   @relation(fields: [userId], references: [userId])
+
+  @@index([postId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model ProductReview {
+  id        String   @id @default(cuid())
+  productId String
+  userId    String
+  rating    Int      @check("rating >= 1 AND rating <= 5")
+  comment   String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id])
+  user    Profile @relation(fields: [userId], references: [userId])
+
+  @@index([productId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  // Relations
+  user    Profile @relation(fields: [userId], references: [userId])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
+// For storing JSON data (specification, etc.)
+type Json {
+  // This is a placeholder - PostgreSQL jsonb type
+  // In practice, you'd use Json from @prisma/client
+  // For now we'll use Json as a generic type
+}
+
+// Helper type for JSON fields
+// In actual implementation with PostgreSQL, you'd use:
+// specifications Json @db.Jsonb
