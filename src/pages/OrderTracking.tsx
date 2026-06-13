@@ -63,7 +63,7 @@ export default function OrderTracking() {
     queryKey: ["order-payment", orderId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("payments")
+        .from("payments_safe")
         .select("*")
         .eq("order_id", orderId!)
         .order("created_at", { ascending: false })
