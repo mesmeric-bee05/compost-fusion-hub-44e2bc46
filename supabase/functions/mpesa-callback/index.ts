@@ -1,10 +1,32 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { clientIp } from "../_shared/rate-limit.ts";
+
+// Production-only allowlist of Safaricom Daraja callback source IPs.
+// Set MPESA_CALLBACK_IPS as a comma-separated list (e.g. "196.201.214.200,196.201.214.206,...").
+// When MPESA_ENV !== "production" or the list is empty, the IP check is skipped.
+function isAllowedCallbackIp(ip: string): boolean {
+  const env = (Deno.env.get("MPESA_ENV") ?? "sandbox").toLowerCase();
+  if (env !== "production") return true;
+  const raw = Deno.env.get("MPESA_CALLBACK_IPS") ?? "";
+  const allow = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (allow.length === 0) return true; // not configured → don't block
+  return allow.includes(ip);
+}
 
 serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204 });
   }
+
+  const ip = clientIp(req);
+  if (!isAllowedCallbackIp(ip)) {
+    console.warn("M-Pesa callback rejected: IP not in allowlist", { ip });
+    return new Response(JSON.stringify({ ResultCode: 1, ResultDesc: "Forbidden" }), {
+      status: 200, headers: { "Content-Type": "application/json" },
+    });
+  }
+
 
   try {
     // Per-transaction callback token from URL path: /mpesa-callback/<token>
