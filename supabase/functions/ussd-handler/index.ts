@@ -389,7 +389,16 @@ Deno.serve(async (req: Request) => {
       return new Response("END Unauthorized", { status: 401, headers: corsHeaders });
     }
 
+    // Per-IP rate limit: USSD is high-frequency but a single phone session is
+    // bounded by AT's 120s timeout — 200 hits/min protects against abuse from
+    // forged callbacks that pass the shared-secret check.
+    const rl = await enforceRateLimit(supabase, `ussd:ip:${clientIp(req)}`, 60, 200);
+    if (!rl.allowed) {
+      return new Response("END Service busy. Try again shortly.", { status: 429, headers: corsHeaders });
+    }
+
     const formData = await req.formData();
+
     const sessionId = formData.get("sessionId") as string;
     const phoneNumber = formData.get("phoneNumber") as string;
     const text = (formData.get("text") as string) || "";
