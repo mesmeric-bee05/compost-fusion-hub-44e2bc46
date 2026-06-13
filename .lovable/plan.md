@@ -96,3 +96,17 @@ Each sprint ends with: `supabase--linter` clean, `security--run_security_scan` n
 ---
 
 **Next step on approval:** start Sprint 1 (security headers, rate-limit RPC, M-Pesa IP allowlist, WhatsApp webhook scaffold). I'll pause before requesting WhatsApp secrets so you can decide whether to defer that integration.
+
+---
+
+## Sprint 1 progress — 2026-06-13
+
+- ✅ `api_rate_limits` table + `check_rate_limit(_bucket_key,_window_seconds,_max_hits)` RPC (service-role only)
+- ✅ Shared helper `supabase/functions/_shared/rate-limit.ts`
+- ✅ Rate limiting wired into `initiate-mpesa-payment` (user + IP), `ussd-handler` (IP), `whatsapp-webhook` (IP)
+- ✅ Safaricom IP allowlist in `mpesa-callback` (`MPESA_CALLBACK_IPS`, prod-gated, skipped when unset)
+- ✅ `public/_headers` with HSTS, CSP (Supabase + Safaricom + AT + Lovable AI + OSM tiles), X-Frame-Options, Referrer-Policy, Permissions-Policy
+- ✅ `whatsapp-webhook` edge function deployed (`verify_jwt = false`) + `docs/whatsapp-setup.md`
+- ⏳ Pending user decision: add `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID` secrets to activate outbound WhatsApp
+
+Next: Sprint 2 (phone OTP login, personal impact dashboard, JSON-LD).
