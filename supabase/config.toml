@@ -5,3 +5,7 @@ verify_jwt = false
 
 [functions.ussd-handler]
 verify_jwt = false
+
+[functions.whatsapp-webhook]
+verify_jwt = false
+
